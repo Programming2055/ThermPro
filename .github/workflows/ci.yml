@@ -1,0 +1,303 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["main", "claude/lv-switchboard-thermal-twin-66cjd8"]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # 1. Lint (ruff)
+  # ---------------------------------------------------------------------------
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install ruff
+        run: pip install ruff==0.6.9
+
+      - name: Lint apps/api
+        run: ruff check apps/api/src/ apps/api/tests/
+        continue-on-error: false
+
+      - name: Lint engine
+        run: ruff check engine/thermal_core/ engine/tests/
+        continue-on-error: false
+
+      - name: Lint packages
+        run: ruff check packages/units/src/ packages/schemas/src/
+        continue-on-error: false
+
+  # ---------------------------------------------------------------------------
+  # 2. Type-check (mypy)
+  # ---------------------------------------------------------------------------
+  type-check:
+    name: Type-check (mypy)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install packages
+        run: |
+          pip install --no-cache-dir \
+            /home/runner/work/ThermPro/ThermPro/packages/units/ \
+            /home/runner/work/ThermPro/ThermPro/packages/schemas/ \
+            /home/runner/work/ThermPro/ThermPro/engine/ \
+            mypy pydantic[mypy] structlog
+
+      - name: Install thermpro packages for mypy
+        working-directory: ${{ github.workspace }}
+        run: |
+          pip install -e packages/units/
+          pip install -e packages/schemas/
+          pip install -e engine/
+
+      - name: mypy — thermpro_units
+        run: mypy packages/units/src/thermpro_units --strict
+
+      - name: mypy — thermal_core
+        run: mypy engine/thermal_core --strict
+
+      - name: mypy — thermpro_schemas
+        run: mypy packages/schemas/src/thermpro_schemas --strict
+
+  # ---------------------------------------------------------------------------
+  # 3. Schema validation (validate M0-03 and M0-04 JSON files are valid JSON)
+  # ---------------------------------------------------------------------------
+  schema-validation:
+    name: Schema file validation
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install jsonschema
+        run: pip install jsonschema==4.23.0
+
+      - name: Validate M0-03 and M0-04 schemas are well-formed JSON Schema
+        run: |
+          python - <<'EOF'
+          import json, jsonschema, pathlib, sys
+
+          schema_dir = pathlib.Path("docs/engineering")
+          schemas = [
+              schema_dir / "M0-03-calculation-input-schema.json",
+              schema_dir / "M0-04-calculation-result-schema.json",
+          ]
+
+          for path in schemas:
+              with open(path) as f:
+                  schema = json.load(f)
+              # check_schema raises SchemaError if meta-schema is violated
+              validator_cls = jsonschema.validators.validator_for(schema)
+              try:
+                  validator_cls.check_schema(schema)
+                  print(f"OK  {path.name}")
+              except jsonschema.exceptions.SchemaError as exc:
+                  print(f"FAIL {path.name}: {exc.message}", file=sys.stderr)
+                  sys.exit(1)
+
+          print("All schemas valid.")
+          EOF
+
+      - name: Verify copied schemas match source
+        run: |
+          python - <<'EOF'
+          import hashlib, pathlib, sys
+
+          def sha256(p):
+              return hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
+
+          pairs = [
+              ("docs/engineering/M0-03-calculation-input-schema.json",
+               "packages/schemas/src/thermpro_schemas/schemas/M0-03-calculation-input-schema.json"),
+              ("docs/engineering/M0-04-calculation-result-schema.json",
+               "packages/schemas/src/thermpro_schemas/schemas/M0-04-calculation-result-schema.json"),
+          ]
+          ok = True
+          for src, dst in pairs:
+              h1, h2 = sha256(src), sha256(dst)
+              if h1 != h2:
+                  print(f"MISMATCH: {src} vs {dst}", file=sys.stderr)
+                  ok = False
+              else:
+                  print(f"OK  {dst}")
+          if not ok:
+              sys.exit(1)
+          EOF
+
+  # ---------------------------------------------------------------------------
+  # 4. Backend unit tests (no database required)
+  # ---------------------------------------------------------------------------
+  backend-unit-tests:
+    name: Backend unit tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install all packages
+        working-directory: ${{ github.workspace }}
+        run: |
+          pip install -e packages/units/
+          pip install -e packages/schemas/
+          pip install -e engine/
+          pip install -e "apps/api/[dev]"
+
+      - name: Run unit tests — thermpro_units (UT-UNITS-001 through UT-UNITS-010)
+        run: pytest packages/units/tests/ -v -m units
+
+      - name: Run unit tests — thermal_core domain types
+        run: |
+          cd engine
+          pytest tests/ -v
+
+      - name: Run unit tests — thermpro_schemas validator
+        run: pytest packages/schemas/tests/ -v
+
+      - name: Run unit tests — API (hashing, schema, library, manifest)
+        run: pytest apps/api/tests/unit/ -v
+
+      - name: Run contract tests (schema contracts — no DB)
+        run: pytest apps/api/tests/contract/ -v -m contract
+
+  # ---------------------------------------------------------------------------
+  # 5. Integration tests (requires PostgreSQL)
+  # ---------------------------------------------------------------------------
+  integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-22.04
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: thermpro
+          POSTGRES_PASSWORD: thermpro
+          POSTGRES_DB: thermpro_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U thermpro -d thermpro_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      THERMPRO_TEST_DATABASE_URL: postgresql+psycopg://thermpro:thermpro@localhost:5432/thermpro_test
+      THERMPRO_DATABASE_URL: postgresql+psycopg://thermpro:thermpro@localhost:5432/thermpro_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install all packages
+        working-directory: ${{ github.workspace }}
+        run: |
+          pip install -e packages/units/
+          pip install -e packages/schemas/
+          pip install -e engine/
+          pip install -e "apps/api/[dev]"
+
+      - name: Run database migrations
+        working-directory: apps/api
+        run: alembic upgrade head
+
+      - name: Run integration tests
+        run: pytest apps/api/tests/integration/ -v -m integration
+
+  # ---------------------------------------------------------------------------
+  # 6. Migration test (verify migrations apply and roll back cleanly)
+  # ---------------------------------------------------------------------------
+  migration-test:
+    name: Migration test
+    runs-on: ubuntu-22.04
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: thermpro
+          POSTGRES_PASSWORD: thermpro
+          POSTGRES_DB: thermpro_migrate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U thermpro -d thermpro_migrate"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      THERMPRO_DATABASE_URL: postgresql+psycopg://thermpro:thermpro@localhost:5432/thermpro_migrate
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install packages
+        working-directory: ${{ github.workspace }}
+        run: |
+          pip install -e packages/units/
+          pip install -e packages/schemas/
+          pip install -e engine/
+          pip install -e "apps/api/[dev]"
+
+      - name: Migrate up
+        working-directory: apps/api
+        run: alembic upgrade head
+
+      - name: Migrate down (verify rollback)
+        working-directory: apps/api
+        run: alembic downgrade base
+
+      - name: Migrate up again (idempotency)
+        working-directory: apps/api
+        run: alembic upgrade head
+
+  # ---------------------------------------------------------------------------
+  # 7. Container build (verify Dockerfile.api builds successfully)
+  # ---------------------------------------------------------------------------
+  container-build:
+    name: Container build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API container image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/docker/Dockerfile.api
+          push: false
+          tags: thermpro-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

@@ -1,0 +1,17 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir hatchling
+
+# Copy packages first for layer caching
+COPY packages/units/ /packages/units/
+COPY packages/schemas/ /packages/schemas/
+COPY engine/ /engine/
+COPY apps/api/ /app/
+
+# Install packages
+RUN pip install --no-cache-dir /packages/units/ /packages/schemas/ /engine/ .
+
+EXPOSE 8000
+CMD ["uvicorn", "thermpro_api.main:app", "--host", "0.0.0.0", "--port", "8000"]

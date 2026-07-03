@@ -1,0 +1,98 @@
+version: "3.9"
+
+# ThermPro — LV Switchboard Thermal Digital Twin
+# Development stack: PostgreSQL + MinIO + API + Web
+# Production deployments use separate orchestration (Kubernetes or ECS).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: thermpro
+      POSTGRES_PASSWORD: thermpro
+      POSTGRES_DB: thermpro
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U thermpro -d thermpro"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 minioadmin minioadmin;
+        mc mb --ignore-existing local/thermpro-artifacts;
+        mc anonymous set none local/thermpro-artifacts;
+        echo 'MinIO bucket thermpro-artifacts ready.';
+      "
+
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      THERMPRO_DATABASE_URL: postgresql+psycopg://thermpro:thermpro@postgres:5432/thermpro
+      THERMPRO_S3_ENDPOINT_URL: http://minio:9000
+      THERMPRO_S3_ACCESS_KEY_ID: minioadmin
+      THERMPRO_S3_SECRET_ACCESS_KEY: minioadmin
+      THERMPRO_S3_BUCKET_ARTIFACTS: thermpro-artifacts
+      THERMPRO_DEV_AUTH_ENABLED: "true"
+      THERMPRO_DEBUG: "true"
+      THERMPRO_LOG_LEVEL: DEBUG
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/app/apps/api:ro
+      - ./packages:/app/packages:ro
+      - ./engine:/app/engine:ro
+
+  web:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/web:/app/apps/web:ro
+    environment:
+      VITE_API_BASE_URL: http://api:8000
+
+volumes:
+  postgres_data:
+  minio_data:

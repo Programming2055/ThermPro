@@ -1,0 +1,156 @@
+.page {
+  max-width: 560px;
+}
+
+.breadcrumb {
+  font-size: 0.8rem;
+  color: #718096;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.breadcrumbLink {
+  color: #2b6cb0;
+  text-decoration: none;
+}
+
+.breadcrumbLink:hover {
+  text-decoration: underline;
+}
+
+.breadcrumbSep {
+  color: #cbd5e0;
+}
+
+.heading {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 1.5rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.required {
+  color: #c53030;
+}
+
+.input,
+.textarea,
+.select {
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  color: #1a202c;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: #2b6cb0;
+  box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.15);
+}
+
+.inputError {
+  border-color: #c53030;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.fieldError {
+  font-size: 0.78rem;
+  color: #c53030;
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: #718096;
+  line-height: 1.4;
+}
+
+.submitError {
+  font-size: 0.875rem;
+  color: #c53030;
+  background: #fff5f5;
+  border: 1px solid #fc8181;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.cancelBtn {
+  padding: 0.45rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  color: #4a5568;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.cancelBtn:hover {
+  background: #edf2f7;
+}
+
+.submitBtn {
+  padding: 0.45rem 1.25rem;
+  background: #2b6cb0;
+  color: #fff;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: #2c5282;
+}
+
+.submitBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+@media (prefers-color-scheme: dark) {
+  .heading { color: #e2e8f0; }
+  .label { color: #e2e8f0; }
+  .input, .textarea, .select {
+    background: #1a202c;
+    border-color: #2d3748;
+    color: #e2e8f0;
+  }
+}
