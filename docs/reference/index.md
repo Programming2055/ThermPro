@@ -1,6 +1,6 @@
 # Reference Document Index — ThermPro Engineering Baseline
 
-**Status:** Rev 0.2 (as of 2026-07-03)
+**Status:** Rev 0.3 (correction commit — as of 2026-07-03)
 
 All baseline documents reside in `docs/`. This index provides a navigational
 summary. Every document must be read and approved before Milestone 1 begins.
@@ -38,22 +38,25 @@ summary. Every document must be read and approved before Milestone 1 begins.
 | IEC 60909 | Short-circuit current calculations (adiabatic fault heating input) |
 | IEC TR 61641:2014 | Internal arc withstand guidance |
 | IEC TS 63107:2021 | Electrothermal coordination in assemblies |
-| IEEE 1584-2018 | Arc-flash parametric screening (INFORMATIVE module) |
-| UL 891 | Deadfront switchboards (North American compliance layer) |
-| UL 1558 | Metal-enclosed switchgear (North American compliance layer) |
-| ANSI/IEEE C37.20.1 | Metal-enclosed bus and switchgear |
-| NFPA 70E | Arc-flash hazard disclaimer requirements |
+| IEEE 1584-2018 | Arc-flash parametric screening — **REMOVED from MVP scope (DR-008)** |
+| UL 891 | Deadfront switchboards — **DEFERRED to Phase 3 (DR-007)** |
+| UL 1558 | Metal-enclosed switchgear — **DEFERRED to Phase 3 (DR-007)** |
+| ANSI/IEEE C37.20.1 | Metal-enclosed bus and switchgear — **DEFERRED to Phase 3 (DR-007)** |
+| NFPA 70E | Arc-flash hazard disclaimer — **not applicable in MVP (arc flash removed)** |
 
 ---
 
 ## Milestone 0 Engineering Deliverables
 
-| File | Description |
-|------|-------------|
-| [M0-01-domain-model.md](../engineering/M0-01-domain-model.md) | Entity-relationship diagram and field definitions |
-| [M0-02-api-contract.md](../engineering/M0-02-api-contract.md) | REST API endpoint contract (OpenAPI style) |
-| [M0-03-calculation-input-schema.json](../engineering/M0-03-calculation-input-schema.json) | JSON Schema for InputSnapshot v1 |
-| [M0-04-calculation-result-schema.json](../engineering/M0-04-calculation-result-schema.json) | JSON Schema for ResultSnapshot v1 |
-| [M0-05-test-validation-matrix.md](../engineering/M0-05-test-validation-matrix.md) | FR → test → benchmark traceability matrix |
-| [M0-06-engineering-assumptions.md](../engineering/M0-06-engineering-assumptions.md) | All engineering assumptions requiring acceptance |
-| [M0-07-open-questions.md](../engineering/M0-07-open-questions.md) | Unresolved questions requiring engineering approval |
+| File | Description | Status |
+|------|-------------|--------|
+| [M0-01-domain-model.md](../engineering/M0-01-domain-model.md) | Entity-relationship diagram and field definitions | Updated (correction commit) |
+| [M0-02-api-contract.md](../engineering/M0-02-api-contract.md) | REST API endpoint contract (OpenAPI style) | Updated (correction commit) |
+| [M0-03-calculation-input-schema.json](../engineering/M0-03-calculation-input-schema.json) | JSON Schema for InputSnapshot v1 | Updated (correction commit) |
+| [M0-04-calculation-result-schema.json](../engineering/M0-04-calculation-result-schema.json) | JSON Schema for ResultSnapshot v1 | Updated (correction commit) |
+| [M0-05-test-validation-matrix.md](../engineering/M0-05-test-validation-matrix.md) | FR → test → benchmark traceability matrix | Updated (correction commit) |
+| [M0-06-engineering-assumptions.md](../engineering/M0-06-engineering-assumptions.md) | All engineering assumptions requiring acceptance | Updated (correction commit) |
+| [M0-07-open-questions.md](../engineering/M0-07-open-questions.md) | Open questions status; M1 blockers remaining: None | Updated (correction commit) |
+| [M0-08-decision-record.md](../engineering/M0-08-decision-record.md) | Engineering approval decision record (DR-001 through DR-012) | NEW |
+| [M0-09-dataset-versioning.md](../engineering/M0-09-dataset-versioning.md) | Library versioning, immutability, manifest, and field deployment policy | NEW |
+| [M0-10-units-policy.md](../engineering/M0-10-units-policy.md) | SI units policy, conversion rules, suffix convention, 10 mandatory unit tests | NEW |

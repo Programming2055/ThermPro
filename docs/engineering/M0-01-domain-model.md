@@ -1,10 +1,19 @@
 # Domain Model — LV Switchboard Thermal Digital Twin
 
 **Document:** M0-01  
-**Milestone:** 0  
+**Milestone:** 0 (correction commit — revision 1)  
 **Date:** 2026-07-03  
-**Status:** Pending Engineering Approval  
-**Source:** THERM-DAT-001 Rev 0.2; THERM-ARCH-001 Rev 0.2
+**Status:** CONDITIONALLY APPROVED  
+**Changes from revision 0:**
+- Arc flash entities and ARC_FLASH mode removed (DR-008)
+- UL/ANSI standards removed from StandardProfile enum (DR-007)
+- BusbarJoint: health_state replaced with joint_condition enum (DR-004)
+- BusbarJoint: universal contact resistance default removed; data hierarchy added (DR-004)
+- BusbarSegment: K_AC fields added (DR-003)
+- Fan: operating_state enum replaces operating bool (DR-005)
+- DeviceLibrary: silent +20% margin removed; uncertainty fields added (DR-009)
+- LibraryRelease entity added (DR-002)
+- thermal_mass_J_K field reserved on entities for transient (DR-006)
 
 ---
 
@@ -44,7 +53,7 @@ Project (1)
 | `name` | string | non-null, 1–200 chars | |
 | `customer` | string | optional | |
 | `assembly_designation` | string | optional | |
-| `standard_profile` | string[] | ≥1 element | e.g. `["IEC_61439_2","IEC_TR_60890"]` |
+| `standard_profile` | string[] | ≥1 element | MVP values: see §6 enum |
 | `system_voltage_V` | float | >0 | |
 | `frequency_Hz` | float | >0 | 50 or 60 |
 | `service_conditions` | ServiceConditions | non-null | see §2.1.1 |
@@ -91,7 +100,7 @@ Project (1)
 | `id` | UUID | PK | |
 | `assembly_id` | UUID | FK Assembly | |
 | `name` | string | non-null | |
-| `external_height_m` | float | >0 | |
+| `external_height_m` | float | >0 | all dimensions in metres |
 | `external_width_m` | float | >0 | |
 | `external_depth_m` | float | >0 | |
 | `wall_thickness_m` | float | >0 | |
@@ -102,6 +111,7 @@ Project (1)
 | `position_y_m` | float | | |
 | `position_z_m` | float | | |
 | `adjacent_enclosure_ids` | UUID[] | | for multi-cubicle assemblies |
+| `adjacent_enclosure_conductance_W_K` | float | optional | adiabatic if null |
 | `restricted_surfaces` | string[] | | e.g. `["REAR","LEFT_SIDE"]` |
 | `created_at` | datetime | | |
 | `updated_at` | datetime | | |
@@ -148,7 +158,7 @@ Project (1)
 | `id` | UUID | PK | |
 | `compartment_id` | UUID | FK Compartment | |
 | `orientation` | enum | HORIZONTAL / VERTICAL | |
-| `position_m` | float | | offset from compartment origin along relevant axis |
+| `position_m` | float | | offset from compartment origin |
 | `thickness_m` | float | >0 | |
 | `material_id` | UUID | FK MaterialLibrary | |
 | `is_perforated` | bool | default false | |
@@ -180,6 +190,9 @@ Project (1)
 | `power_coefficient_a` | float | optional | quadratic: P = a·I² + b·I + c |
 | `power_coefficient_b` | float | optional | |
 | `power_coefficient_c` | float | optional | |
+| `power_uncertainty_min_W` | float | optional | for sensitivity scenario |
+| `power_uncertainty_max_W` | float | optional | for sensitivity scenario |
+| `thermal_mass_J_K` | float | optional | reserved for future transient capability |
 
 ---
 
@@ -193,9 +206,10 @@ Project (1)
 | `phase_label` | string | optional | "L1", "L2", "L3", "N", "PE" |
 | `current_A` | float | ≥0 | |
 | `material_id` | UUID | FK MaterialLibrary | copper or aluminium |
-| `cross_section_m2` | float | >0 | |
+| `cross_section_m2` | float | >0 | width_m × thickness_m |
 | `width_m` | float | >0 | bar width |
 | `thickness_m` | float | >0 | bar thickness |
+| `emissivity` | float | 0–1 | surface emissivity; user must confirm if not bare copper |
 
 ---
 
@@ -212,13 +226,19 @@ Project (1)
 | `end_y_m` | float | | |
 | `end_z_m` | float | | |
 | `length_m` | float | >0 | computed |
-| `resistance_ref_ohm` | float | >0 | at T_ref |
+| `resistance_ref_ohm` | float | >0 | R_DC at T_ref |
 | `temp_coefficient_1_K` | float | | α (default: Cu=0.00393, Al=0.00403) |
 | `temp_ref_C` | float | default 20 | |
+| `k_ac_factor` | float | optional, ≥1 | Level 2 AC correction. Null = DC only with warning |
+| `k_ac_source` | enum | MANUFACTURER / VALIDATED_CORRELATION / GEOMETRY_FREQUENCY_LIBRARY / USER_INPUT / NOT_APPLIED | Required when k_ac_factor is set |
+| `thermal_mass_J_K` | float | optional | reserved for future transient capability |
 
 ---
 
 ### 2.10 BusbarJoint
+
+**Changes from revision 0:** `health_state` and `health_state_modifier` replaced by
+`joint_condition` and `contact_resistance_source` per DR-004. Universal 10 µΩ default removed.
 
 | Field | Type | Constraints | Notes |
 |-------|------|-------------|-------|
@@ -229,15 +249,27 @@ Project (1)
 | `position_x_m` | float | | |
 | `position_y_m` | float | | |
 | `position_z_m` | float | | |
-| `contact_resistance_ref_ohm` | float | >0 | at T_ref, health=NOMINAL |
-| `temp_coefficient_contact_1_K` | float | | α_contact |
+| `joint_condition` | enum | NEW_VALIDATED / NEW_ASSUMED / MEASURED / AGED / DEGRADED / UNKNOWN | |
+| `contact_resistance_ref_ohm` | float | >0, required when source is not UNKNOWN | Contact resistance at T_ref [Ω]. **No default; must be supplied.** |
+| `contact_resistance_source` | enum | MEASURED / MANUFACTURER / JOINT_LIBRARY / USER_ASSUMPTION | |
+| `sensitivity_min_ohm` | float | optional | Lower bound for sensitivity scenario [Ω] |
+| `sensitivity_nominal_ohm` | float | optional | Nominal for sensitivity scenario [Ω] |
+| `sensitivity_max_ohm` | float | optional | Upper bound for sensitivity scenario [Ω] |
+| `temp_coefficient_contact_1_K` | float | | α_contact for contact resistance |
 | `temp_ref_C` | float | default 20 | |
-| `health_state` | enum | NOMINAL / DEGRADED / UNKNOWN | |
-| `health_state_modifier` | float | >0, default 1.0 | f_health; >1 = degraded |
 | `assembly_torque_Nm` | float | optional | measured at assembly |
 | `torque_specification_Nm` | float | optional | from manufacturer |
 | `torque_compliance` | enum | COMPLIANT / NON_COMPLIANT / NOT_CHECKED | |
 | `data_confidence` | enum | HIGH / MEDIUM / LOW / UNKNOWN | |
+| `thermal_mass_J_K` | float | optional | reserved for future transient capability |
+
+**Validation rules:**
+- When `joint_condition = UNKNOWN`: `sensitivity_min_ohm`, `sensitivity_nominal_ohm`, and
+  `sensitivity_max_ohm` are required; `contact_resistance_ref_ohm` is null.
+- When `joint_condition ≠ UNKNOWN`: `contact_resistance_ref_ohm` is required and
+  `contact_resistance_source` must be set.
+- When `contact_resistance_source = USER_ASSUMPTION`: the result carries a `DATA_ASSUMPTION`
+  flag; report wording must state the assumed value.
 
 ---
 
@@ -252,10 +284,13 @@ Project (1)
 | `length_m` | float | >0 | |
 | `current_A` | float | ≥0 | |
 | `bundling_factor` | float | 0–1, default 1.0 | derating for bundled cables |
+| `thermal_mass_J_K` | float | optional | reserved for future transient capability |
 
 ---
 
 ### 2.12 Fan
+
+**Changes from revision 0:** `operating: bool` replaced by `operating_state: enum` (DR-005).
 
 | Field | Type | Constraints | Notes |
 |-------|------|-------------|-------|
@@ -267,7 +302,8 @@ Project (1)
 | `position_z_m` | float | | |
 | `orientation` | enum | INLET / OUTLET | |
 | `mounting_surface` | enum | FRONT / REAR / LEFT / RIGHT / TOP / BOTTOM | |
-| `operating` | bool | default true | allows fan disable for fault studies |
+| `operating_state` | enum | FORWARD_OPERATING / STOPPED_FREE_FLOW / STOPPED_WITH_DAMPER / FAILED_OPEN / FAILED_BLOCKED / ESTIMATED_REVERSE_FLOW | Default: FORWARD_OPERATING |
+| `fan_loss_coefficient_K` | float | optional | K for fan duct resistance in non-operating states |
 
 ---
 
@@ -282,9 +318,11 @@ Project (1)
 | `position_y_m` | float | | |
 | `position_z_m` | float | | |
 | `mounting_surface` | enum | same as Fan | |
-| `effective_area_m2` | float | >0 | Cd × gross area |
-| `discharge_coefficient` | float | 0–1, default 0.6 | |
+| `gross_area_m2` | float | >0 | total face area (see M0-10 §4.1) |
+| `open_area_fraction` | float | 0–1 | net free area = gross × fraction |
+| `discharge_coefficient` | float | 0–1, default 0.6 | Cd; effective area = Cd × net free area |
 | `filter_id` | UUID | FK Filter, optional | |
+| `filter_pressure_drop_Pa` | float | optional | at nominal flow; fixed value |
 
 ---
 
@@ -304,11 +342,35 @@ Project (1)
 
 ## 3. Library Entities
 
-### 3.1 MaterialLibrary
+### 3.1 LibraryRelease (new in revision 1)
+
+Every library type uses this versioning structure (see M0-09 for full specification).
 
 | Field | Type | Notes |
 |-------|------|-------|
 | `id` | UUID | PK |
+| `library_name` | string | e.g. "MaterialLibrary" |
+| `semantic_version` | string | e.g. "1.2.0" |
+| `revision_id` | UUID | immutable identifier |
+| `content_hash_sha256` | string | 64 hex chars; computed over canonical entry set |
+| `status` | enum | DRAFT / APPROVED / SUPERSEDED / WITHDRAWN |
+| `effective_date` | date | |
+| `source_reference` | string | |
+| `creator` | string | email |
+| `approver` | string | email |
+| `approval_date` | date | |
+| `supersedes_version` | string | optional |
+| `change_summary` | string | |
+| `entry_count` | int | |
+
+---
+
+### 3.2 MaterialLibrary
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | PK |
+| `library_release_id` | UUID | FK LibraryRelease |
 | `name` | string | e.g. "Mild Steel", "Copper", "Aluminium 1050" |
 | `density_kg_m3` | float | |
 | `thermal_conductivity_W_mK` | float | |
@@ -317,22 +379,26 @@ Project (1)
 | `temp_coefficient_1_K` | float | optional |
 | `temp_ref_C` | float | default 20 |
 | `emissivity` | float | 0–1 |
-| `version` | string | semantic version |
 | `source` | string | manufacturer / standard / measured |
 
 ---
 
-### 3.2 DeviceLibrary
+### 3.3 DeviceLibrary
+
+**Changes from revision 0:** Automatic +20% loss margin removed. Uncertainty fields added (DR-009).
 
 | Field | Type | Notes |
 |-------|------|-------|
 | `id` | UUID | PK |
+| `library_release_id` | UUID | FK LibraryRelease |
 | `manufacturer` | string | |
 | `model_reference` | string | |
 | `device_type` | enum | MCB / MCCB / ACB / CONTACTOR / RELAY / METER / TRANSFORMER / VSD / OTHER |
 | `rated_current_A` | float | |
 | `rated_voltage_V` | float | |
-| `power_loss_at_rated_W` | float | |
+| `power_loss_at_rated_W` | float | Source value — **never silently modified by solver** |
+| `power_loss_min_W` | float | optional; for sensitivity scenario |
+| `power_loss_max_W` | float | optional; for sensitivity scenario |
 | `thermal_model` | enum | QUADRATIC / LINEAR / FIXED_POWER |
 | `power_coefficient_a` | float | optional |
 | `power_coefficient_b` | float | optional |
@@ -344,39 +410,78 @@ Project (1)
 | `depth_m` | float | |
 | `data_confidence` | enum | HIGH / MEDIUM / LOW / UNKNOWN |
 | `source_document` | string | manufacturer datasheet / IEC 60947 / measured |
-| `version` | string | |
 
 ---
 
-### 3.3 ConductorLibrary
+### 3.4 ConductorLibrary
 
 | Field | Type | Notes |
 |-------|------|-------|
 | `id` | UUID | PK |
+| `library_release_id` | UUID | FK LibraryRelease |
 | `name` | string | |
-| `cross_section_mm2` | float | |
+| `cross_section_mm2` | float | stored in mm² for display; converted to m² at input boundary |
 | `material` | enum | COPPER / ALUMINIUM |
 | `insulation_type` | string | e.g. "PVC", "XLPE" |
 | `resistance_per_m_ohm` | float | at 20 °C |
 | `current_capacity_A` | float | in free air at 30 °C |
 | `max_operating_temp_C` | float | |
-| `version` | string | |
 
 ---
 
-### 3.4 VentilationDeviceLibrary
+### 3.5 VentilationDeviceLibrary
 
 | Field | Type | Notes |
 |-------|------|-------|
 | `id` | UUID | PK |
+| `library_release_id` | UUID | FK LibraryRelease |
 | `manufacturer` | string | |
 | `model_reference` | string | |
-| `fan_curve` | JSON | array of {static_pressure_Pa, flow_rate_m3s} points |
+| `fan_curve` | JSON | array of {static_pressure_Pa, flow_rate_m3s}; points in m³/s and Pa |
 | `rated_flow_rate_m3s` | float | at zero static pressure |
 | `rated_static_pressure_Pa` | float | at zero flow |
+| `fan_curve_validated_min_flow_m3s` | float | lower validated extrapolation bound |
+| `fan_curve_validated_max_flow_m3s` | float | upper validated extrapolation bound |
+| `loss_coefficient_stopped_K` | float | duct loss coefficient when fan stopped (STOPPED_FREE_FLOW) |
 | `power_W` | float | electrical power consumption |
 | `noise_dBA` | float | optional |
-| `version` | string | |
+
+---
+
+### 3.6 BusbarJointLibrary
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | PK |
+| `library_release_id` | UUID | FK LibraryRelease |
+| `description` | string | e.g. "M10 bolt, Cu bar, clean, 40 Nm" |
+| `joint_type` | string | BOLTED / BUSWAY / CRIMPED |
+| `contact_material` | string | |
+| `contact_resistance_ref_ohm` | float | at 20 °C, validated condition |
+| `temp_coefficient_contact_1_K` | float | |
+| `torque_specification_Nm` | float | |
+| `data_source` | string | |
+| `data_confidence` | enum | HIGH / MEDIUM / LOW |
+
+---
+
+### 3.7 ACResistanceLibrary
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `id` | UUID | PK |
+| `library_release_id` | UUID | FK LibraryRelease |
+| `description` | string | e.g. "Cu bar 60×10mm at 50Hz" |
+| `busbar_width_m` | float | |
+| `busbar_thickness_m` | float | |
+| `busbar_material` | enum | COPPER / ALUMINIUM |
+| `frequency_Hz` | float | 50 or 60 |
+| `phase_count` | int | 1, 2, or 3 |
+| `phase_spacing_m` | float | |
+| `k_ac_factor` | float | ≥1 |
+| `source` | string | MANUFACTURER / VALIDATED_CORRELATION / PHYSICAL_TEST |
+| `source_document` | string | |
+| `data_confidence` | enum | HIGH / MEDIUM / LOW |
 
 ---
 
@@ -389,12 +494,15 @@ Project (1)
 | `id` | UUID | PK |
 | `project_id` | UUID | FK Project |
 | `enclosure_id` | UUID | FK Enclosure |
-| `mode` | enum | MODE_1 / MODE_2 / MODE_3 / MODE_4 / ARC_FLASH |
+| `mode` | enum | MODE_1 / MODE_2 / MODE_3 / MODE_4 |
 | `status` | enum | PENDING / RUNNING / CONVERGED / NON_CONVERGED / FAILED / CANCELLED |
 | `schema_version` | string | e.g. "1.0" |
-| `input_snapshot` | JSONB | versioned InputSnapshot |
-| `result_snapshot` | JSONB | versioned ResultSnapshot |
-| `convergence_trace` | JSONB | iteration history |
+| `input_snapshot` | JSONB | versioned InputSnapshot (stored in PostgreSQL) |
+| `result_snapshot` | JSONB | versioned ResultSnapshot summary (stored in PostgreSQL) |
+| `convergence_trace` | JSONB | iteration history (stored in PostgreSQL) |
+| `library_manifest` | JSONB | pinned library names, versions, and hashes |
+| `input_hash_sha256` | string | SHA-256 of canonical InputSnapshot JSON |
+| `result_hash_sha256` | string | SHA-256 of canonical ResultSnapshot JSON |
 | `engine_version` | string | thermpro_engine semver |
 | `submitted_at` | datetime | |
 | `started_at` | datetime | |
@@ -402,26 +510,11 @@ Project (1)
 | `user_id` | UUID | FK User |
 | `audit_notes` | string | optional |
 
----
-
-### 4.2 ConvergenceTrace (embedded in CalculationRun)
-
-```json
-{
-  "outer_iterations": [
-    {
-      "iteration": 1,
-      "max_delta_T_K": 15.2,
-      "inner_iterations": 12,
-      "mass_imbalance_fraction": 0.0042,
-      "energy_imbalance_W": 0.83
-    }
-  ],
-  "converged": true,
-  "convergence_criterion_T_K": 0.1,
-  "wall_clock_s": 3.42
-}
-```
+**Large artefacts stored in S3/MinIO (object key stored in separate table):**
+- PDF report
+- XLSX report
+- Dense thermal field data (HDF5)
+- CFD export/import files
 
 ---
 
@@ -454,6 +547,12 @@ Enclosure         N ──── 1   MaterialLibrary
 Conductor         N ──── 1   ConductorLibrary
 Fan               N ──── 1   VentilationDeviceLibrary
 Project           1 ──── N   CalculationRun
+LibraryRelease    1 ──── N   MaterialLibrary (entries)
+LibraryRelease    1 ──── N   DeviceLibrary (entries)
+LibraryRelease    1 ──── N   ConductorLibrary (entries)
+LibraryRelease    1 ──── N   VentilationDeviceLibrary (entries)
+LibraryRelease    1 ──── N   BusbarJointLibrary (entries)
+LibraryRelease    1 ──── N   ACResistanceLibrary (entries)
 ```
 
 ---
@@ -462,7 +561,8 @@ Project           1 ──── N   CalculationRun
 
 | Enum Name | Values |
 |-----------|--------|
-| StandardProfile | IEC_61439_1, IEC_61439_2, IEC_TR_60890, IEEE_1584_2018, UL_891, UL_1558, ANSI_IEEE_C37_20_1 |
+| StandardProfile (MVP) | IEC_61439_1, IEC_61439_2, IEC_TR_60890, MANUFACTURER_LIMITS, PROJECT_DEFINED |
+| StandardProfile (future, not in MVP) | UL_891, UL_1558, ANSI_IEEE_C37_20_1, IEEE_1584_2018 |
 | InstallationType | FREE_STANDING, WALL_MOUNTED, FLOOR_MOUNTED, FLUSH_MOUNTED, CEILING_MOUNTED |
 | FormType | 1, 2, 3, 4 |
 | SurfaceType | WALL, DOOR, PANEL, PLINTH, ROOF, FLOOR |
@@ -470,11 +570,14 @@ Project           1 ──── N   CalculationRun
 | DeviceType | MCB, MCCB, ACB, CONTACTOR, RELAY, METER, TRANSFORMER, VSD, OTHER |
 | ThermalModel | QUADRATIC, LINEAR, FIXED_POWER |
 | DataConfidence | HIGH, MEDIUM, LOW, UNKNOWN |
-| HealthState | NOMINAL, DEGRADED, UNKNOWN |
+| JointCondition | NEW_VALIDATED, NEW_ASSUMED, MEASURED, AGED, DEGRADED, UNKNOWN |
+| ContactResistanceSource | MEASURED, MANUFACTURER, JOINT_LIBRARY, USER_ASSUMPTION |
 | TorqueCompliance | COMPLIANT, NON_COMPLIANT, NOT_CHECKED |
-| CalculationMode | MODE_1, MODE_2, MODE_3, MODE_4, ARC_FLASH |
+| CalculationMode (MVP) | MODE_1, MODE_2, MODE_3, MODE_4 |
 | RunStatus | PENDING, RUNNING, CONVERGED, NON_CONVERGED, FAILED, CANCELLED |
 | MountingSurface | FRONT, REAR, LEFT, RIGHT, TOP, BOTTOM |
 | PollutionDegree | 1, 2, 3, 4 |
 | OperatingMode | CONTINUOUS, INTERMITTENT, SHORT_TIME |
-| FanOrientation | INLET, OUTLET |
+| FanOperatingState | FORWARD_OPERATING, STOPPED_FREE_FLOW, STOPPED_WITH_DAMPER, FAILED_OPEN, FAILED_BLOCKED, ESTIMATED_REVERSE_FLOW |
+| KAcSource | MANUFACTURER, VALIDATED_CORRELATION, GEOMETRY_FREQUENCY_LIBRARY, USER_INPUT, NOT_APPLIED |
+| LibraryStatus | DRAFT, APPROVED, SUPERSEDED, WITHDRAWN |

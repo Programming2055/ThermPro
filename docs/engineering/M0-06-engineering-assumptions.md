@@ -1,11 +1,11 @@
 # Engineering Assumptions — LV Switchboard Thermal Digital Twin
 
 **Document:** M0-06  
-**Milestone:** 0  
+**Milestone:** 0 (correction commit — revision 1)  
 **Date:** 2026-07-03  
-**Status:** Pending Engineering Approval  
+**Status:** UPDATED — Applied DR-003, DR-004, DR-005, DR-008, DR-009  
 **Source:** Extracted from THERM-METH-001, THERM-EQN-001, THERM-NET-001, THERM-AFN-001,
-THERM-DAT-001, THERM-ARCH-001 Rev 0.1/0.2
+THERM-DAT-001, THERM-ARCH-001 Rev 0.1/0.2; M0-08-decision-record.md
 
 ---
 
@@ -67,13 +67,13 @@ addressed by a design change or flagged as a known limitation in the user manual
 
 | ID | Assumption | Impact | Verification |
 |----|-----------|--------|-------------|
-| ASS-ELEC-001 | Skin effect is not modelled for busbar resistance at power frequency (50/60 Hz). Skin depth in copper at 50 Hz: ~9.3 mm. | HIGH | Significant for busbars wider than 18 mm. User must apply skin-effect correction factor or use measured AC resistance. Open question OQ-001. |
-| ASS-ELEC-002 | Proximity effect between parallel busbars is not modelled. | HIGH | Can increase effective resistance by 10–30 % in closely-spaced busbars. User must apply multiplier. Open question OQ-001. |
-| ASS-ELEC-003 | Current is uniformly distributed across the cross-section of each busbar segment. | MEDIUM | Consequence of ASS-ELEC-001. |
+| ASS-ELEC-001 | Skin effect and proximity effect are handled by a staged K_AC methodology (DR-003). Level 1: R_DC(T) = ρ_ref·[1+α(T−T_ref)]·L/A always computed. Level 2: R_AC = K_AC × R_DC(T) when K_AC is available from a qualified source (manufacturer, validated test, approved correlation, geometry/frequency library, or explicit user input). K_AC = 1.0 with a mandatory non-suppressible warning is the fallback when no qualified source is available. Level 3 (numerical EM) reserved for a future release. | HIGH | Skin depth in copper at 50 Hz ≈ 9.3 mm; significant for busbars > 18 mm wide. K_AC from manufacturer or validated correlation eliminates this risk. Warning is non-suppressible when K_AC = 1.0 is used. Resolved: OQ-001 → DR-003. |
+| ASS-ELEC-002 | Proximity effect is included in the K_AC factor defined in ASS-ELEC-001. No separate proximity factor is applied. | HIGH | K_AC from manufacturer AC resistance measurement accounts for both skin and proximity effects together. User must not apply a separate proximity multiplier when K_AC already covers it. Resolved: OQ-001 → DR-003. |
+| ASS-ELEC-003 | Current is uniformly distributed across the cross-section of each busbar segment at the Level 1 (R_DC) and Level 2 (K_AC × R_DC) computation stages. | MEDIUM | Non-uniform distribution is a consequence of skin/proximity, which are captured by K_AC at Level 2. Residual non-uniformity within the cross-section is a Level 3 concern. |
 | ASS-ELEC-004 | Eddy current losses in enclosure walls (magnetic field effects) are not modelled. | MEDIUM | Typically < 5 % of total loss for steel-walled enclosures at rated current. Stainless steel: negligible. |
 | ASS-ELEC-005 | Default temperature coefficient of resistance for copper: α = 0.00393 K⁻¹ at 20 °C. | LOW | Standard value per IEC 60228. User can override per conductor. |
 | ASS-ELEC-006 | Default temperature coefficient of resistance for aluminium: α = 0.00403 K⁻¹ at 20 °C. | LOW | Standard value. |
-| ASS-ELEC-007 | Contact resistance of a nominal joint (f_health = 1.0) must be provided by the user from torque-resistance correlation or manufacturer data. Default value = 10 µΩ assumed if not provided. | HIGH | Contact resistance varies widely with surface condition, torque, and age. See RISK-ENG-007. |
+| ASS-ELEC-007 | Contact resistance follows a strict data hierarchy per DR-004: MEASURED > MANUFACTURER > JOINT_LIBRARY > USER_ASSUMPTION. The universal 10 µΩ default has been removed. When joint_condition = UNKNOWN, a single-value computation is not permitted; the solver requires sensitivity_min/nominal/max_ohm and runs sensitivity scenarios. The new joint_condition enum is: NEW_VALIDATED, NEW_ASSUMED, MEASURED, AGED, DEGRADED, UNKNOWN. | HIGH | Contact resistance varies by 2–3 orders of magnitude with surface condition, torque, and age. The hierarchy forces the engineer to declare the provenance of the value used. UNKNOWN condition triggers scenarios rather than a silent worst-case. Resolved: OQ-002 → DR-004. |
 | ASS-ELEC-008 | Quadratic device loss model P = a·I² + b·I + c is valid across the full current range 0 to I_rated. Extrapolation beyond rated current is flagged as a warning. | MEDIUM | Coefficients derived from manufacturer loss curves. |
 
 ---
@@ -98,7 +98,7 @@ addressed by a design change or flagged as a known limitation in the user manual
 | ASS-FLOW-002 | Airflow is incompressible (constant density within each network element). Density is updated between outer iterations using calculated temperature. | LOW | Mach number < 0.01 at all flow rates of interest; incompressible assumption valid. |
 | ASS-FLOW-003 | Fan P-Q curve is modelled as a piecewise-linear interpolation between manufacturer data points. | LOW | Sufficient for steady-state operating point. Dynamic fan characteristics (surge, stall) are not modelled. |
 | ASS-FLOW-004 | Filter pressure drop is constant at nominal flow rate. Filter blockage over time is not modelled. | MEDIUM | User must schedule filter cleaning or replace the pressure drop value for dirty filter condition. |
-| ASS-FLOW-005 | Reverse flow through a fan (operating as a resistance) is not modelled. If calculated flow is negative, a warning is issued and flow is set to zero. | HIGH | Reverse flow can occur in multi-fan configurations. Open question OQ-006. |
+| ASS-FLOW-005 | Fan reverse flow is handled by six explicit operating states per DR-005: FORWARD_OPERATING, STOPPED_FREE_FLOW, STOPPED_WITH_DAMPER, FAILED_OPEN, FAILED_BLOCKED, ESTIMATED_REVERSE_FLOW. Reverse flow is NOT clamped to zero unless a physical non-return damper is present (STOPPED_WITH_DAMPER state). Normal fan P-Q curves are NOT extrapolated beyond their validated data points. | HIGH | Clamping to zero was unconservative for multi-fan configurations where reverse flow occurs at partial load. The six-state model allows the engineer to declare the actual physical situation. Resolved: OQ-006 → DR-005. |
 | ASS-FLOW-006 | Buoyancy is modelled as a stack pressure: ΔP = ρ·g·H·β·ΔT. Valid for H < 3 m. | LOW | Most LV switchboards are < 2.5 m. |
 
 ---
@@ -113,13 +113,15 @@ addressed by a design change or flagged as a known limitation in the user manual
 
 ---
 
-## 9. Arc Flash (IEEE 1584-2018) Assumptions
+## 9. Arc Flash — REMOVED FROM MVP SCOPE (DR-008)
 
-| ID | Assumption | Impact | Verification |
-|----|-----------|--------|-------------|
-| ASS-ARC-001 | Arc-flash screening is INFORMATIVE only. Results must not be used for PPE selection without a complete arc-flash hazard analysis by a qualified engineer. | CRITICAL | Enforced by label = "INFORMATIVE" in all outputs (CR-ENG-007). |
-| ASS-ARC-002 | Arcing fault current is estimated from bolted fault current using IEEE 1584-2018 correlation if not provided. This estimate has ±15 % uncertainty. | HIGH | Documented in disclaimer. |
-| ASS-ARC-003 | IEEE 1584-2018 parametric equations are valid for: 208–15,000 V; fault currents 0.5–106 kA; gaps 6.35–76.2 mm. Extrapolation outside these bounds raises an error. | HIGH | Validated against RE-004. |
+> Arc-flash functionality has been entirely removed from the ThermPro MVP (DR-008, approved
+> 2026-07-03). All arc-flash assumptions (ASS-ARC-001, ASS-ARC-002, ASS-ARC-003) are
+> withdrawn. CR-ENG-007 (arc-flash INFORMATIVE label) is also withdrawn (DR-012).
+>
+> Arc flash may become a separate future module sharing project data but with an independent
+> engine, schemas, validation suite, and reports. No arc-flash architecture shall be designed
+> in M1–M5.
 
 ---
 
@@ -138,6 +140,6 @@ addressed by a design change or flagged as a known limitation in the user manual
 
 | ID | Assumption | Impact | Verification |
 |----|-----------|--------|-------------|
-| ASS-DATA-001 | Device loss data with confidence = UNKNOWN is used with a +20 % safety margin applied to reported power loss. | HIGH | Approved engineering assumption per THERM-METH-001 §8. |
-| ASS-DATA-002 | Contact resistance data with confidence = UNKNOWN uses default 10 µΩ per joint. | HIGH | This is a gross simplification. See RISK-ENG-007 and OQ-002. |
+| ASS-DATA-001 | Device loss data with confidence = UNKNOWN is handled through explicit scenarios per DR-009. The silent +20 % safety margin has been removed. The engineer must supply power_loss_min_W, power_loss_nominal_W, and power_loss_max_W. The solver runs three scenario calculations (min, nominal, max). Report wording states the confidence level and the range of results. | HIGH | Resolved: silent margin was neither visible to the user nor explainable in a compliance report. Explicit scenarios are fully documented in the audit trail. Resolved: DR-009. |
+| ASS-DATA-002 | Contact resistance data with confidence = UNKNOWN requires sensitivity scenarios as specified in ASS-ELEC-007. A default value is no longer permitted for UNKNOWN condition joints. See DR-004. | HIGH | Resolved: OQ-002 → DR-004. |
 | ASS-DATA-003 | Manufacturer derating tables are loaded into DeviceLibrary and assumed to be valid for the stated conditions. No independent verification is performed by the software. | MEDIUM | User responsibility to ensure library data quality. |

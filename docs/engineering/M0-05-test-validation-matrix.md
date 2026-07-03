@@ -1,10 +1,10 @@
 # Test and Validation Matrix — LV Switchboard Thermal Digital Twin
 
 **Document:** M0-05  
-**Milestone:** 0  
+**Milestone:** 0 (correction commit — revision 1)  
 **Date:** 2026-07-03  
-**Status:** Pending Engineering Approval  
-**Source:** THERM-VAL-001 Rev 0.2; THERM-REQ-001 Rev 0.2
+**Status:** UPDATED — Applied DR-008 (arc flash removed), DR-010 (BM-007 reclassified), DR-011 (units tests)  
+**Source:** THERM-VAL-001 Rev 0.2; THERM-REQ-001 Rev 0.2; M0-08-decision-record.md
 
 ---
 
@@ -16,7 +16,7 @@ the test(s) that verify it. Four validation levels are used:
 | Level | Type | When Run |
 |-------|------|----------|
 | L1 | Unit test (pytest) | Every CI push |
-| L2 | Analytical benchmark | Every CI push (benchmarks mark) |
+| L2 | Analytical benchmark | Every CI push (benchmarks mark), except BM-007 (see §3) |
 | L3 | Reference example (IEC/CT145) | Pre-release only |
 | L4 | Physical test data import | Pre-production sign-off |
 
@@ -31,7 +31,7 @@ the test(s) that verify it. Four validation levels are used:
 | FR-THERM-001 | Joule loss at rated current | UT-JOULE-001 | BM-003 | ±0.001 % vs analytical |
 | FR-THERM-002 | Resistance evaluated at conductor temperature | UT-JOULE-002, UT-JOULE-003 | BM-003 | R(T) within 0.01 % of formula |
 | FR-THERM-003 | Quadratic device loss model | UT-JOULE-004 | BM-002 | ±0.1 W vs exact |
-| FR-THERM-004 | Joint degradation model R_joint(T, f_health) | UT-JOULE-003 | BM-008 | Hotspot ΔT within ±0.5 K of analytical |
+| FR-THERM-004 | Joint contact resistance hierarchy; sensitivity scenarios for UNKNOWN condition | UT-JOULE-003, UT-JOINT-001 | BM-008 | Hotspot ΔT within ±0.5 K of analytical; sensitivity range spans nominal ±factor |
 | FR-THERM-005 | Control transformer core + copper loss | (new: UT-JOULE-005) | BM-002 | ±1 % of nameplate loss |
 | FR-THERM-006 | Natural convection — vertical plates | UT-CONV-001 | BM-001 | Nu within ±5 % of Churchill-Chu |
 | FR-THERM-007 | Natural convection — horizontal up | UT-CONV-002 | BM-001 | Nu within ±5 % of McAdams |
@@ -44,7 +44,7 @@ the test(s) that verify it. Four validation levels are used:
 | FR-THERM-014 | Thermal matrix G·T = Q assembly | UT-MATRIX-001, UT-MATRIX-002 | BM-002 | Residual < 1e-10 |
 | FR-THERM-015 | Convergence detection | UT-MATRIX-003 | BM-002 | Converges within 50 outer iterations |
 | FR-THERM-016 | Divergence → NON_CONVERGED status | UT-MATRIX-004 | — | Status = NON_CONVERGED on deliberately divergent input |
-| FR-THERM-017 | De Vahl Davis cavity benchmark | — | BM-007 | Nu_avg = 8.80 ± 2 % at Ra = 10⁶ |
+| FR-THERM-017 | De Vahl Davis cavity benchmark | — | BM-007 | Nu_avg = 8.80 ± 2 % at Ra = 10⁶ (periodic physics verification; see DR-010) |
 | FR-THERM-018 | Shell conduction for thin walls | UT-COND-003 | BM-002 | Error < 0.01 K vs analytical (thin-wall limit) |
 | FR-THERM-019 | Solid conduction: Q = kA/L × ΔT | UT-COND-001, UT-COND-002 | BM-002 | ±0.001 % vs analytical |
 
@@ -76,7 +76,7 @@ the test(s) that verify it. Four validation levels are used:
 | CR-ENG-005 | NON_CONVERGED → status flag in result | UT-MATRIX-004 | — | ResultSnapshot.status = NON_CONVERGED |
 | CR-TECH-001 | Engine accepts/returns versioned JSON only | UT-ENGINE-001 | — | Engine raises ValueError on missing schema_version |
 | CR-TECH-002 | schema_version required in both I/O | UT-ENGINE-001 | — | Schema validation fails without it |
-| CR-TECH-003 | De Vahl Davis regression | — | BM-007 | REGRESSION SENSITIVE; fails CI if Nu outside ±2 % |
+| CR-TECH-003 | De Vahl Davis physics verification | — | BM-007 | Periodic only (@pytest.mark.periodic_physics); NOT a mandatory every-push gate (DR-010) |
 
 ---
 
@@ -94,14 +94,19 @@ the test(s) that verify it. Four validation levels are used:
 
 ### 2.5 Standards Compliance Requirements
 
+> **Note (DR-007, DR-008):** UL 891, UL 1558, ANSI/IEEE C37.20.1, and IEEE 1584-2018 are
+> removed from MVP scope. UT-COMP-002 and UT-ARC-001 are removed. CR-ENG-007
+> is WITHDRAWN (DR-012) because arc flash is not in MVP.
+
 | FR / CR | Description | L1 Tests | L2 Benchmarks | Pass Criterion |
 |---------|-------------|----------|---------------|----------------|
 | FR-STD-001 | IEC 61439-2 temperature-rise limits applied | UT-COMP-001 | RE-001, RE-002 | Limit 70 K busbar; 80 K terminals; etc. |
-| FR-STD-002 | UL/ANSI temperature limits applied when profile active | UT-COMP-002 | — | 65 K busbar rise above 40 °C for UL |
 | FR-STD-003 | IEC TR 60890 MODE 1 disabled when fans present | UT-MODE-001 | — | Error response, not a silent override |
 | FR-STD-004 | IEC TR 60890 dataset never shipped | (manual check) | — | Null values in template; test checks template has no non-null coefficients |
-| CR-ENG-007 | Arc-flash label = "INFORMATIVE" always | UT-ARC-001 | — | label field const "INFORMATIVE" in schema; runtime check |
-| CR-ENG-009 | Compliance profile-aware | UT-COMP-001, UT-COMP-002 | — | Different limits returned for IEC vs UL profile |
+| CR-ENG-009 | Compliance profile-aware | UT-COMP-001 | RE-001, RE-002 | Limits per active standard profile (IEC 61439 MVP only) |
+| CR-ENG-010 | Contact resistance data hierarchy enforced | UT-JOINT-001, UT-JOINT-002 | BM-008 | MEASURED > MANUFACTURER > JOINT_LIBRARY > USER_ASSUMPTION; UNKNOWN triggers sensitivity |
+| CR-ENG-011 | K_AC = 1.0 fallback triggers non-suppressible warning | UT-KAC-001 | — | Warning present in result when k_ac_source absent/USER_INPUT |
+| CR-ENG-012 | Library content hash validated before solver runs | UT-LIB-002 | — | Hash mismatch → LIBRARY_VERSION_MISMATCH; solver does not run |
 
 ---
 
@@ -119,29 +124,53 @@ the test(s) that verify it. Four validation levels are used:
 | FR / CR | Description | L1 Tests |
 |---------|-------------|----------|
 | FR-MAT-001 | Device library: quadratic loss model | UT-JOULE-004 |
-| FR-MAT-002 | Device library: data_confidence field | UT-DATA-001 |
-| FR-MAT-003 | BusbarJoint: f_health modifier | UT-JOULE-003 |
-| FR-MAT-004 | Material library versioning | UT-LIB-001 |
+| FR-MAT-002 | Device library: data_confidence field + uncertainty range | UT-DATA-001, UT-DATA-002 |
+| FR-MAT-003 | BusbarJoint: joint_condition enum; contact_resistance_source | UT-JOULE-003, UT-JOINT-001 |
+| FR-MAT-004 | Material library versioning; content_hash_sha256 immutable | UT-LIB-001, UT-LIB-002 |
 | FR-AUD-001 | Calculation run stores input hash | UT-AUD-001 |
 | FR-AUD-002 | Result reproducible from stored InputSnapshot | UT-AUD-002 |
+| FR-AUD-003 | Library manifest pinned in InputSnapshot | UT-LIB-002 |
+
+---
+
+### 2.8 Units and Dimensional Analysis Requirements (DR-011)
+
+| FR / CR | Description | L1 Tests | Pass Criterion |
+|---------|-------------|----------|----------------|
+| CR-ENG-013 | All engine inputs/outputs in SI base units | UT-UNITS-001 through UT-UNITS-010 | See M0-10 §6 |
+| CR-ENG-013-a | Convert 600 mm → 0.600 m | UT-UNITS-001 | Tolerance 1e-9 |
+| CR-ENG-013-b | Convert 50 µΩ → 50e-6 Ω | UT-UNITS-002 | Tolerance 1e-15 |
+| CR-ENG-013-c | Convert 40 °C → 313.15 K | UT-UNITS-003 | Tolerance 1e-6 |
+| CR-ENG-003 | Radiation with T[°C] input raises ValueError | UT-UNITS-004 | ValueError before engine receives value |
+| CR-ENG-013-e | Convert 1000 m³/h → 0.2778 m³/s | UT-UNITS-005 | Tolerance 1e-4 |
+| CR-ENG-013-f | Gross area × open_fraction × Cd = effective area | UT-UNITS-006 | gross=0.1m², f=0.6, Cd=0.6 → effective=0.036 m² |
+| CR-ENG-013-g | Gauge pressure + P_atm = absolute pressure | UT-UNITS-007 | 50 Pa gauge → 101 375 Pa abs (tolerance 1 Pa) |
+| CR-ENG-013-h | Thermal conductivity 50 W/(m·K) unchanged | UT-UNITS-008 | value == 50.0 (no spurious scaling) |
+| CR-ENG-013-i | Resistivity × length / area → resistance | UT-UNITS-009 | Consistent with UT-JOULE-001 |
+| CR-ENG-013-j | Density 1.2 kg/m³ not confused with 1200 g/m³ | UT-UNITS-010 | g/m³ input rejected or converted |
 
 ---
 
 ## 3. Level 2 Benchmark Definitions
 
-| ID | Name | Mode | Expected Result | Tolerance | Regression |
-|----|------|------|-----------------|-----------|------------|
+| ID | Name | Mode | Expected Result | Tolerance | Regression (every-push) |
+|----|------|------|-----------------|-----------|------------------------|
 | BM-001 | Single heated vertical wall — natural convection | MODE_2 | h within ±5 % of Churchill-Chu (Ra = 10⁵) | ±5 % | No |
 | BM-002 | Closed box — uniform heat source, no airflow | MODE_2 | ΔT_internal within ±1 K of analytical | ±1 K | No |
 | BM-003 | Two-node conduction chain | MODE_2 | ΔT within ±0.001 °C of Q = kA/L·ΔT | ±0.001 °C | **YES** |
 | BM-004 | Forced-air energy balance — single compartment | MODE_3 | ΔT_outlet within ±0.5 K; mass balance < 0.1 % | ±0.5 K | No |
 | BM-005 | Natural stack opening — two-compartment enclosure | MODE_2/3 | Mass imbalance < 0.1 % | < 0.1 % | **YES** |
 | BM-006 | Radiation exchange — parallel isothermal surfaces | MODE_2 | Q_rad within ±1 % of exact formula | ±1 % | No |
-| BM-007 | De Vahl Davis square cavity, Ra = 10⁶ | MODE_2 | Nu_avg = 8.80 ± 2 % | ±2 % | **YES** |
-| BM-008 | Degraded joint hotspot — f_health = 2.0 | MODE_2 | Joint ΔT within ±0.5 K of analytical | ±0.5 K | **YES** |
+| BM-007 | De Vahl Davis square cavity, Ra = 10⁶ | MODE_2 | Nu_avg = 8.80 ± 2 % | ±2 % | **PERIODIC ONLY** (DR-010) |
+| BM-008 | Joint contact resistance — MEASURED vs UNKNOWN scenarios | MODE_2 | Joint ΔT within ±0.5 K of analytical; sensitivity band correct | ±0.5 K | **YES** |
 
-**Regression-sensitive benchmarks** (BM-003, BM-005, BM-007, BM-008) are marked in CI as
-`--benchmark-compare`. Any change in result outside tolerance fails the pipeline.
+**Regression-sensitive every-push benchmarks:** BM-003, BM-005, BM-008 (and BM-001, BM-002, BM-004, BM-006 as
+pass/fail checks). These are marked `--benchmark-compare` in CI.
+
+**BM-007 (De Vahl Davis)** is reclassified to `@pytest.mark.periodic_physics` per DR-010.
+It runs in the nightly/weekly scheduled pipeline, not on every push. Rationale: this
+benchmark requires a fine mesh and takes significantly longer than all other L2 benchmarks
+combined. Reclassification reduces per-push CI time while preserving physics verification.
 
 ---
 
@@ -152,7 +181,7 @@ the test(s) that verify it. Four validation levels are used:
 | RE-001 | IEC TR 60890 worked example | IEC TR 60890:2022 | Licensed; imported by admin | MAE < 0.5 K vs published result |
 | RE-002 | CT145 reference enclosure | Schneider CT145 | User-provided from CT145 text | MAE < 2 K |
 | RE-003 | Factory acceptance test (FAT) import | IEC 61439-1 Annex D | Structured JSON from physical test | MAE < 3 K; RMSE < 4 K; max error < 8 K; bias −2 to +2 K |
-| RE-004 | IEEE 1584-2018 arc-flash example | IEEE 1584-2018 | Public worked example | Incident energy within ±5 % |
+| ~~RE-004~~ | ~~IEEE 1584-2018 arc-flash example~~ | ~~IEEE 1584-2018~~ | Removed from scope (DR-008) | — |
 
 ---
 
@@ -200,12 +229,17 @@ format:
 ## 7. CI Pipeline Test Run Order
 
 ```
-1. mypy --strict thermpro_engine       (type checks; fails fast)
-2. pytest tests/unit/ -x               (unit tests; stop on first fail)
-3. pytest tests/unit/ --cov=thermpro_engine --cov-fail-under=90
-4. pytest tests/benchmarks/ -m regression  (regression-sensitive only; fast)
-5. pytest tests/benchmarks/            (all benchmarks; slower)
-6. pytest tests/integration/           (requires running Docker stack)
+1. mypy --strict thermpro_engine                          (type checks; fails fast)
+2. pytest tests/unit/ -m units -x                         (unit conversion tests; UT-UNITS-001–010)
+3. pytest tests/unit/ -x                                  (all unit tests; stop on first fail)
+4. pytest tests/unit/ --cov=thermpro_engine --cov-fail-under=90
+5. pytest tests/benchmarks/ -m "regression and not periodic_physics"
+                                                           (regression-sensitive benchmarks; fast)
+6. pytest tests/benchmarks/ -m "not periodic_physics"     (all non-periodic benchmarks)
+7. pytest tests/integration/                              (requires running Docker stack)
+
+# Scheduled pipeline (nightly or weekly — not every push):
+8. pytest tests/benchmarks/ -m periodic_physics           (De Vahl Davis BM-007; slow)
 ```
 
 ---
@@ -250,12 +284,25 @@ format:
 | UT-ENGINE-001 | solver | schema_version required; ValueError without it |
 | UT-MODE-001 | modes/iec_60890 | Returns DISABLED when Fan entity present |
 | UT-COMP-001 | postprocess/compliance | IEC 61439-2 busbar limit 70 K |
-| UT-COMP-002 | postprocess/compliance | UL 891 busbar limit differs from IEC |
-| UT-ARC-001 | modes/arc_flash | label always = "INFORMATIVE" |
 | UT-AUD-001 | solver | input_hash_sha256 stored in result |
 | UT-AUD-002 | solver | Identical InputSnapshot → identical result |
 | UT-LIB-001 | validation/data_quality | Library version pinned in InputSnapshot |
-| UT-DATA-001 | validation/data_quality | data_confidence = UNKNOWN triggers warning |
+| UT-LIB-002 | validation/data_quality | Content hash mismatch → LIBRARY_VERSION_MISMATCH, solver blocked |
+| UT-DATA-001 | validation/data_quality | data_confidence = UNKNOWN triggers warning and scenario requirement |
+| UT-DATA-002 | validation/data_quality | Uncertainty range (min/nominal/max) present when confidence = UNKNOWN |
+| UT-JOINT-001 | physics/joints | joint_condition = UNKNOWN requires sensitivity_min/nominal/max_ohm |
+| UT-JOINT-002 | physics/joints | Contact resistance hierarchy: MEASURED source takes precedence |
+| UT-KAC-001 | physics/joule | K_AC = 1.0 fallback emits K_AC_UNITY_FALLBACK warning in result |
+| UT-UNITS-001 | unit_conversion | 600 mm → 0.600 m (tolerance 1e-9) |
+| UT-UNITS-002 | unit_conversion | 50 µΩ → 50e-6 Ω (tolerance 1e-15) |
+| UT-UNITS-003 | unit_conversion | 40 °C → 313.15 K (tolerance 1e-6) |
+| UT-UNITS-004 | unit_conversion | Radiation with T[°C] raises ValueError |
+| UT-UNITS-005 | unit_conversion | 1000 m³/h → 0.2778 m³/s (tolerance 1e-4) |
+| UT-UNITS-006 | unit_conversion | gross=0.1 m², f=0.6, Cd=0.6 → effective=0.036 m² |
+| UT-UNITS-007 | unit_conversion | 50 Pa gauge → 101 375 Pa absolute (tolerance 1 Pa) |
+| UT-UNITS-008 | unit_conversion | 50 W/(m·K) passes through unchanged |
+| UT-UNITS-009 | unit_conversion | Resistivity × length / area → resistance consistent with UT-JOULE-001 |
+| UT-UNITS-010 | unit_conversion | 1.2 kg/m³ not confused with 1200 g/m³; g/m³ input rejected |
 | UT-GEO-001 | validation/geometry | Devices within enclosure boundary |
 | UT-GEO-005 | validation/geometry | Overlapping device detection |
 | UT-GEO-006 | validation/geometry | Busbar outside enclosure boundary |

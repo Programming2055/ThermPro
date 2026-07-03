@@ -1,10 +1,10 @@
 # API Contract — LV Switchboard Thermal Digital Twin
 
 **Document:** M0-02  
-**Milestone:** 0  
+**Milestone:** 0 (correction commit — revision 1)  
 **Date:** 2026-07-03  
-**Status:** Pending Engineering Approval  
-**Source:** THERM-ARCH-001 Rev 0.2; THERM-DAT-001 Rev 0.2
+**Status:** UPDATED — Applied DR-001, DR-002, DR-007, DR-008  
+**Source:** THERM-ARCH-001 Rev 0.2; THERM-DAT-001 Rev 0.2; M0-08-decision-record.md
 
 ---
 
@@ -30,6 +30,15 @@
 
 - API version strategy: URL-path versioned (`/api/v1/`, `/api/v2/`). Breaking changes
   require a new version prefix.
+- Storage architecture (DR-001): PostgreSQL JSONB stores InputSnapshot, structured result
+  summaries, convergence traces, library manifests, and audit metadata. S3-compatible
+  object storage (MinIO in development) stores PDF/XLSX reports, CAD files, dense thermal
+  fields, and HDF5 ROM snapshots. File download endpoints return pre-signed S3 URLs or
+  stream through the API; they never return raw JSONB fields.
+- Library versioning (DR-002): Every `InputSnapshot` must carry a `library_manifest`
+  pinning the name, semantic version, and SHA-256 content hash of every library referenced
+  by the calculation. The solver validates all hashes before running. Mismatches return
+  `LIBRARY_VERSION_MISMATCH` without running the solver.
 
 ---
 
@@ -42,15 +51,19 @@
 | Devices | `/devices` | Device placement and loading |
 | Busbars | `/busbars` | BusbarRun, Segment, and Joint management |
 | Fans & Openings | `/ventilation` | Fans, openings, filters, ducts |
-| Libraries | `/libraries` | Material, device, conductor, ventilation device libraries |
+| Libraries | `/libraries` | Material, device, conductor, ventilation device, busbar joint, AC resistance libraries |
 | Calculations | `/calculations` | Submit and retrieve calculation runs |
 | Results | `/results` | Result retrieval and export |
-| Arc Flash | `/arc-flash` | IEEE 1584-2018 screening (INFORMATIVE) |
 | ROM | `/rom` | Reduced-order model build and evaluate |
 | Reports | `/reports` | Report generation and download |
 | Audit | `/audit` | Calculation audit trail |
 | Admin | `/admin` | Library administration (licensed dataset import) |
 | Auth | `/auth` | Authentication tokens |
+
+> **Removed from MVP (DR-008):** Arc-flash endpoint group (`/arc-flash`) is not implemented
+> in MVP. All arc-flash input fields, result fields, API endpoints, and test rows have been
+> removed. A future module may provide arc-flash functionality under a separate licensed
+> add-on. See M0-08 DR-008.
 
 ---
 
@@ -75,7 +88,7 @@
   "name": "string (required)",
   "customer": "string (optional)",
   "assembly_designation": "string (optional)",
-  "standard_profile": ["IEC_61439_2"],
+  "standard_profile": ["IEC_61439_1", "IEC_61439_2"],
   "system_voltage_V": 400.0,
   "frequency_Hz": 50.0,
   "service_conditions": {
@@ -165,8 +178,22 @@
 **CalculationSubmit body:**
 ```json
 {
+  "schema_version": "1.0",
   "enclosure_id": "uuid",
   "mode": "MODE_2",
+  "standard_profile": ["IEC_61439_1", "IEC_61439_2"],
+  "library_manifest": {
+    "material_library": {
+      "name": "MaterialLibrary",
+      "version": "1.2.0",
+      "content_hash_sha256": "a1b2c3d4..."
+    },
+    "device_library": {
+      "name": "DeviceLibrary",
+      "version": "2.0.1",
+      "content_hash_sha256": "e5f6a7b8..."
+    }
+  },
   "solver_settings": {
     "max_outer_iterations": 50,
     "max_inner_iterations": 100,
@@ -175,7 +202,8 @@
     "convergence_power_fraction": 0.005,
     "energy_imbalance_limit": 0.01,
     "mass_imbalance_limit": 0.005,
-    "relaxation_factor": 0.7
+    "relaxation_factor": 0.7,
+    "run_sensitivity_scenarios": false
   },
   "overrides": {}
 }
@@ -241,48 +269,7 @@ data: {"status": "CONVERGED", "run_id": "uuid"}
 
 ---
 
-### 3.7 Arc Flash (INFORMATIVE)
-
-> **DISCLAIMER:** Arc-flash outputs are INFORMATIVE screening results only, based on
-> IEEE 1584-2018 parametric equations. They do not constitute an arc-flash hazard study.
-> A qualified engineer must perform a complete arc-flash analysis per NFPA 70E before
-> any work on energised equipment.
-
-| Method | Path | Description | Request Body | Response |
-|--------|------|-------------|--------------|----------|
-| `POST` | `/arc-flash/screen` | Run IEEE 1584-2018 screening | `ArcFlashInput` | `ArcFlashResult` |
-| `GET` | `/arc-flash/{run_id}` | Get previous screening result | — | `ArcFlashResult` |
-
-**ArcFlashInput body:**
-```json
-{
-  "enclosure_id": "uuid",
-  "working_distance_mm": 610.0,
-  "bolted_fault_current_kA": 25.0,
-  "arcing_fault_current_kA": null,
-  "upstream_clearing_time_s": 0.1,
-  "system_voltage_V": 400.0,
-  "electrode_configuration": "VCB",
-  "conductor_gap_mm": 32.0
-}
-```
-
-**ArcFlashResult response:**
-```json
-{
-  "label": "INFORMATIVE",
-  "disclaimer": "This is a screening result only. See full disclaimer in report.",
-  "incident_energy_J_cm2": 4.2,
-  "arc_flash_boundary_mm": 920.0,
-  "ppe_category": 2,
-  "standard": "IEEE 1584-2018",
-  "inputs_used": {}
-}
-```
-
----
-
-### 3.8 ROM (Reduced-Order Model)
+### 3.7 ROM (Reduced-Order Model)
 
 | Method | Path | Description | Request Body | Response |
 |--------|------|-------------|--------------|----------|
@@ -294,29 +281,44 @@ data: {"status": "CONVERGED", "run_id": "uuid"}
 
 ---
 
-### 3.9 Libraries (Admin-controlled)
+### 3.8 Libraries (Admin-controlled)
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
 | `GET` | `/libraries/materials` | List materials | Any |
 | `POST` | `/libraries/materials` | Add material | Admin |
-| `PUT` | `/libraries/materials/{id}` | Update material | Admin |
+| `PUT` | `/libraries/materials/{id}` | Replace entry (creates new library release) | Admin |
 | `GET` | `/libraries/devices` | List device library entries | Any |
 | `POST` | `/libraries/devices` | Add device | Admin |
 | `GET` | `/libraries/conductors` | List conductors | Any |
 | `POST` | `/libraries/conductors` | Add conductor | Admin |
 | `GET` | `/libraries/ventilation` | List fans/filters | Any |
 | `POST` | `/libraries/ventilation` | Add ventilation device | Admin |
+| `GET` | `/libraries/busbar-joints` | List busbar joint resistance entries | Any |
+| `POST` | `/libraries/busbar-joints` | Add busbar joint entry | Admin |
+| `GET` | `/libraries/ac-resistance` | List K_AC factor entries | Any |
+| `POST` | `/libraries/ac-resistance` | Add K_AC factor entry | Admin |
+| `GET` | `/libraries/{library_name}/releases` | List all releases for a library | Any |
+| `GET` | `/libraries/{library_name}/releases/{version}` | Get specific library release | Any |
 | `POST` | `/admin/iec60890/import` | Import licensed IEC TR 60890 dataset | Super-Admin |
 | `GET` | `/admin/iec60890/status` | Check if dataset is present | Admin |
+| `GET` | `/admin/iec60890/template` | Download null-valued template for import guide | Admin |
 
-**Note on IEC TR 60890 import:** The import endpoint accepts the administrator's JSON
-file which contains the licensed coefficient tables. The system ships with a null-valued
-template only. The template is returned by `GET /admin/iec60890/template`.
+**Note on library immutability (DR-002):** Library entries are never modified in-place.
+Any change creates a new library release with an incremented semantic version and a new
+content SHA-256 hash. The PUT endpoints above accept an amendment request and return the
+new release record. Historical calculation runs always resolve to their original release.
+
+**Note on IEC TR 60890 import:** The import endpoint accepts the administrator's own JSON
+file containing the licensed coefficient tables. The system ships with null values only.
+
+**Library manifest validation:** The solver validates that every pinned library in
+`library_manifest` exists and matches its `content_hash_sha256` before running. Returns
+`LIBRARY_VERSION_MISMATCH` (422) if any hash does not match.
 
 ---
 
-### 3.10 Reports
+### 3.9 Reports
 
 | Method | Path | Description | Response |
 |--------|------|-------------|----------|
@@ -330,15 +332,14 @@ template only. The template is returned by `GET /admin/iec60890/template`.
 {
   "run_id": "uuid",
   "format": "PDF",
-  "include_sections": ["SUMMARY", "TEMPERATURES", "DERATING", "COMPLIANCE", "CONVERGENCE"],
-  "monochrome": false,
-  "include_arc_flash": false
+  "include_sections": ["SUMMARY", "TEMPERATURES", "DERATING", "COMPLIANCE", "CONVERGENCE", "SENSITIVITY"],
+  "monochrome": false
 }
 ```
 
 ---
 
-### 3.11 Audit
+### 3.10 Audit
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -353,10 +354,19 @@ template only. The template is returned by `GET /admin/iec60890/template`.
   "schema_version": "1.0",
   "input_hash_sha256": "abc123...",
   "result_hash_sha256": "def456...",
-  "library_versions": {
-    "material_library": "1.0.0",
-    "device_library": "1.2.3"
+  "library_manifest": {
+    "material_library": {
+      "name": "MaterialLibrary",
+      "version": "1.0.0",
+      "content_hash_sha256": "a1b2c3d4..."
+    },
+    "device_library": {
+      "name": "DeviceLibrary",
+      "version": "1.2.3",
+      "content_hash_sha256": "e5f6a7b8..."
+    }
   },
+  "all_libraries_resolvable": true,
   "reproduced_at": null
 }
 ```
