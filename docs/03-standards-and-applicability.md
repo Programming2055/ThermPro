@@ -68,6 +68,83 @@ The empirical tables and coefficients in IEC TR 60890 are copyrighted by IEC. Th
 - Provides the framework for thermal admittance matrices, natural convection between cells, and the iterative solution between temperature and derating.
 - The document is used as a methodology reference only. Proprietary datasets, manufacturer-specific tables, and any copyrighted numerical values from this document are NOT reproduced in ThermPro.
 
+### 2.5 IEC 60947 — Low-Voltage Switchgear and Controlgear
+
+**Full title:** IEC 60947 series — Low-voltage switchgear and controlgear
+
+**Relevance to ThermPro:**
+
+- Governs the individual devices installed in assemblies (circuit breakers, disconnectors, contactors, motor-starters, fuses).
+- Temperature limits for device terminals and enclosures referenced in IEC 60947 inform the device thermal limit database.
+- Loss values from IEC 60947 type-test reports are the preferred source for DeviceLibrary entries.
+
+### 2.6 IEC 60909 — Short-Circuit Currents
+
+**Full title:** IEC 60909-0:2016 — Short-circuit currents in three-phase a.c. systems — Part 0: Calculation of currents
+
+**Relevance to ThermPro:**
+
+- Provides the network-side framework for calculating prospective short-circuit current at the assembly.
+- ThermPro does not perform short-circuit current calculations. The short-circuit current is an input parameter entered by the engineer.
+- The adiabatic conductor-heating check uses the fault current from this source.
+
+### 2.7 IEC TR 61641 — Internal Arcing in Enclosed LV Switchgear
+
+**Full title:** IEC TR 61641:2014 — Enclosed low-voltage switchgear and controlgear assemblies — Guide for testing under conditions of arcing due to internal fault
+
+**Relevance to ThermPro:**
+
+- Defines internal-arc testing philosophy and pressure/thermal effects on assembly enclosures.
+- The arc-flash safety module references IEC TR 61641 for enclosure-level internal-arc behaviour.
+- ThermPro does not replace the IEC TR 61641 test; the software provides informative hazard screening using IEEE 1584 parametric methods.
+
+### 2.8 IEC TS 63107 — Active Arc-Fault Mitigation
+
+**Full title:** IEC TS 63107 — Low-voltage switchgear and controlgear assemblies — Guide for active arc fault mitigation systems
+
+**Relevance to ThermPro:**
+
+- Referenced when the arc-flash module evaluates mitigation options (arc detection relays, arc-quenching devices).
+- Mitigation systems modelled in ThermPro should be labelled with reference to IEC TS 63107 or equivalent product documentation.
+
+### 2.9 IEEE 1584-2018 — Arc-Flash Hazard Calculations
+
+**Full title:** IEEE 1584-2018 — IEEE Guide for Performing Arc-Flash Hazard Calculations
+
+**Relevance to ThermPro:**
+
+- Provides the parametric incident-energy model for LV and MV electrical equipment.
+- ThermPro's arc-flash safety module implements the IEEE 1584-2018 workflow:
+  - Electrode configuration classification (VCB, VCBB, HCB, VOA, HOA).
+  - Working distance and enclosure size inputs.
+  - Arcing current calculation from bolted fault current.
+  - Incident energy in cal/cm² and arc-flash boundary in metres.
+- Results are labelled as INFORMATIVE. The engineer must verify applicability of the IEEE 1584 model to the specific equipment.
+
+### 2.10 North American Standards — UL 891, UL 1558, ANSI/IEEE C37.20.1
+
+**Full titles:**
+- UL 891 — Switchboards, 1000 V or Less
+- UL 1558 — Metal-Enclosed Low-Voltage Power Circuit Breaker Switchgear
+- ANSI/IEEE C37.20.1 — IEEE Standard for Metal-Enclosed Low-Voltage (1000 Vac and Below, 3200 Vdc and Below) Power Circuit Breaker Switchgear
+
+**Relevance to ThermPro:**
+
+- Cover North American switchboard and metal-enclosed switchgear product families.
+- UL/ANSI temperature-rise limits differ from IEC 61439 in some respects; in particular, a 65 °C bus temperature rise above a 40 °C maximum ambient is a common UL/ANSI design reference for relevant designs.
+- ThermPro implements a **dual compliance mode** that allows the engineer to select between IEC 61439 and UL/ANSI temperature-limit profiles. The same thermal calculation is used; only the compliance interpretation layer differs.
+- The software separates **physical prediction** from **compliance interpretation** so that the same temperature field can be assessed against either standard family without re-running the solver.
+
+### 2.11 NFPA 70E — Electrical Safety in the Workplace
+
+**Full title:** NFPA 70E:2024 — Standard for Electrical Safety in the Workplace
+
+**Relevance to ThermPro:**
+
+- Governs safe work practices for personnel working on or near energised electrical equipment.
+- The arc-flash safety module outputs required by NFPA 70E include: incident energy (cal/cm²), arc-flash protection boundary (m), and required PPE category.
+- ThermPro labels NFPA 70E outputs clearly and does not substitute for a formal arc-flash study by a qualified person.
+
 ---
 
 ## 3. Calculation Modes and Standards Alignment
@@ -78,6 +155,25 @@ The empirical tables and coefficients in IEC TR 60890 are copyrighted by IEC. Th
 | MODE 2 | Nodal Thermal Network | CT145 / physics-based | Engineering calculation (not standardised) |
 | MODE 3 | Forced-Ventilation Airflow Network | Physics-based | Engineering calculation (not standardised) |
 | MODE 4 | CFD Export/Import Adapter | External solver | External solver provides results |
+| ARC-FLASH | IEEE 1584-2018 Arc-Flash Module | IEEE 1584-2018 + NFPA 70E | Informative safety screening only |
+
+### 3.1 North American Parallel Rules Stack
+
+ThermPro supports a parallel compliance interpretation layer for North American markets.
+The thermal solver is identical; only the temperature-limit profile and report labels change.
+
+| Element | IEC Framework | North American Framework |
+|---------|--------------|------------------------|
+| Primary assembly standard | IEC 61439-2 | UL 891 / UL 1558 / ANSI/IEEE C37.20.1 |
+| Calculation method | IEC TR 60890 (MODE 1) or physics-based | Physics-based; UL temperature limits applied |
+| Bus temperature limit | 70 K rise (copper, bare) per IEC 61439 | 65 K rise above 40 °C max ambient (UL/ANSI typical) |
+| Arc-flash standard | IEC TR 61641 (internal arc test) | IEEE 1584-2018 + NFPA 70E |
+| Short-circuit current | IEC 60909 | ANSI/IEEE C37 methods |
+| Compliance claim | "Temperature-rise verification per IEC TR 60890" | "Temperature assessment per UL 891 / UL 1558 limits" |
+
+**Key principle:** Physical prediction and compliance interpretation are separated.
+The same temperature field can be assessed against either standard family without
+re-running the solver.
 
 ---
 
@@ -227,14 +323,25 @@ All historical calculation runs retain their original standard reference.
 
 ## 8. Limitations and Exclusions
 
-The following thermal analysis topics are not covered by any current standard-compliant
-method in ThermPro and must be handled by a qualified engineer using external tools:
+The following topics are either covered with stated restrictions or excluded from
+ThermPro and must be handled by a qualified engineer using external tools:
 
-- Short-circuit thermal effects (adiabatic temperature rise of conductors).
-- Temperature rise during arc-flash events.
-- Thermal ageing models for insulation.
-- Transient start-up and load-cycle analysis (architecture is provided but steady-state is the initial implementation).
-- Outdoor enclosures subject to direct solar radiation (solar load may be entered as an additional heat source but is not calculated internally).
+- **Short-circuit thermal effects:** The adiabatic I²t conductor-heating check is
+  implemented as a screening calculation only. Non-adiabatic transient analysis is
+  not currently implemented.
+- **Arc-flash hazard:** The IEEE 1584-2018 module is an informative screening tool.
+  It does not replace a formal arc-flash hazard analysis by a qualified person. Results
+  carry an INFORMATIVE label and require engineer review before use in safety labels
+  or work procedures.
+- **Thermal ageing models for insulation:** Not implemented. Insulation ageing is
+  outside the scope of steady-state thermal assessment.
+- **Transient start-up and load-cycle analysis:** Architecture is provided but
+  steady-state is the initial implementation. Transient capability is planned for
+  a later milestone.
+- **Outdoor enclosures subject to direct solar radiation:** Solar load may be entered
+  as an additional heat source, but solar irradiance is not calculated internally.
+- **Electromagnetic force analysis:** Electrodynamic forces from short-circuit currents
+  are not calculated. ThermPro is a thermal tool only.
 
 ---
 

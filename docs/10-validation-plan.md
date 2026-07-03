@@ -152,6 +152,54 @@ T_1 = 80 °C, T_2 = 40 °C. ε_eff = 1/(1/0.9 + 1/0.85 − 1) ≈ 0.778.
 
 **Acceptance criterion:** Solver Q_rad within ±1% of 34.7 W.
 
+### 4.7 BM-007 — De Vahl Davis Differentially Heated Cavity
+
+**Setup:** 2D square cavity (side length H = 1 m) filled with air. Left vertical wall held
+at T_hot; right vertical wall at T_cold = T_hot − ΔT; top and bottom walls adiabatic.
+Rayleigh number Ra = 10⁶ (achieved by setting appropriate ΔT and air properties).
+The gravity vector is downward (along the cavity height).
+
+**Purpose:** Verification of the buoyancy (Boussinesq) solver implementation. This is
+the canonical benchmark for natural-convection codes (de Vahl Davis, 1983). Any
+buoyancy solver implementation must pass this benchmark before deployment to real
+enclosure cases.
+
+**Analytical/reference:** Average Nusselt number on the heated wall at Ra = 10⁶:
+**Nu_avg ≈ 8.80** (de Vahl Davis benchmark; high-accuracy finite-difference solution).
+
+The correct circulation cell must be reproduced: hot air rises along the left wall,
+crosses the top, descends along the cold wall, and returns along the bottom.
+
+**Acceptance criteria:**
+- Average Nu on the hot wall within ±2% of 8.80 (i.e., 8.62 ≤ Nu ≤ 8.98).
+- Correct single-cell circulation pattern.
+- Maximum temperature: at top-left corner; minimum: at bottom-right corner.
+- Top and bottom boundary: zero heat flux (adiabatic).
+
+**Note:** This benchmark is designated regression-sensitive. It must be re-run on every
+release and every change to the convection or airflow solver modules.
+
+### 4.8 BM-008 — Degraded Joint Hotspot Sensitivity
+
+**Setup:** A simple two-busbar-segment configuration with one joint between them. Current
+I = 400 A. Nominal case: R_joint = 1 × 10⁻⁶ Ω (nominal contact resistance, f_health = 1.0).
+Degraded case: f_health = 5.0 (five-fold resistance increase representing loose joint).
+
+**Purpose:** Verify that the joint entity model (THERM-EQN-001 §4.5) correctly amplifies
+local hotspot temperature when f_health > 1, without proportionally affecting the
+global average temperature.
+
+**Expected behaviour:**
+- Nominal case: joint temperature rise ≈ I² × R_joint / G_joint (close to segment temperature).
+- Degraded case (f_health = 5): joint power = 5× nominal; localised hotspot at joint rises
+  while global average changes by less than 5 K.
+- A NOT_VERIFIABLE flag shall be raised if R_joint_ref has data_confidence = LOW.
+
+**Acceptance criteria:**
+- Degraded case joint temperature ≥ nominal case joint temperature + 4 × (nominal P_joint / G_local).
+- Solver correctly propagates the health-state modifier through R_joint(T, health).
+- Audit trail confirms f_health = 5.0 was the source of hotspot.
+
 ---
 
 ## 5. Level 3 — Published/Reference Examples
@@ -194,6 +242,27 @@ measured at specified points under defined load conditions), ThermPro shall be a
 reproduce the test setup and compare to the measured temperatures.
 
 **Acceptance criterion:** MAE < 3 K; maximum error < 5 K.
+
+### 5.4 RE-004 — IEEE 1584-2018 Arc-Flash Screening Case
+
+**Purpose:** Verify that the arc-flash module correctly implements the IEEE 1584-2018
+parametric workflow for at least one electrode configuration.
+
+**Required inputs:** Bolted fault current, system voltage, electrode configuration
+(e.g., HCB — horizontal conductors in a box), enclosure dimensions, working distance,
+arc duration.
+
+**Expected output:** Arcing current (kA), incident energy (cal/cm²), arc-flash boundary (m).
+
+**Acceptance criterion:** When the licensed IEEE 1584-2018 standard is available,
+reproduce the standard's own verification examples within ±5% of the published
+incident-energy values. If IEEE 1584-2018 examples are not directly available, use
+a published worked example from an IEEE tutorial document or equivalent authorised
+source with the same acceptance tolerance.
+
+**Scope restriction:** This benchmark verifies the parametric model implementation only.
+It does not validate the model against physical arc-flash tests. The software module
+carries an INFORMATIVE label at all times (CR-ENG-007).
 
 ---
 
@@ -301,6 +370,8 @@ release:
 |------|--------------|
 | BM-003 Two-node conduction | Core matrix solve correctness |
 | BM-005 Natural stack opening | Buoyancy coupling; often breaks when ρ(T) changes |
+| BM-007 De Vahl Davis cavity | Buoyancy solver verification; Nu ≈ 8.8 at Ra = 10⁶ |
+| BM-008 Degraded joint hotspot | Joint entity model; sensitivity to f_health modifier |
 | UT-RAD-004 Temperature unit check | Radiation in kelvin; a °C/K confusion causes large errors |
 | UT-MATRIX-004 Singular matrix | Solver robustness |
 | UT-FLOW-005 Mass balance | Mass conservation is a fundamental constraint |

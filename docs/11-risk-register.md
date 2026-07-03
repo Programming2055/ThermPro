@@ -274,7 +274,78 @@ strategy is defined. The register must be reviewed at every milestone gate.
 
 ---
 
+### RISK-ENG-007 — Contact Resistance Uncertainty Causing Hotspot Underprediction
+
+| Field | Value |
+|-------|-------|
+| **Category** | Engineering / Data Quality |
+| **Description** | Bolted joint and terminal contact resistance values are often unavailable from manufacturers. When R_joint is ASSUMED, the thermal model may underpredict local hotspot temperatures by a wide margin. Published LV switchgear CFD studies show average underprediction of ~10 °C in hermetic and ~6 °C in ventilated enclosures, partly attributable to uncertain contact and emissivity inputs. |
+| **Likelihood** | 4 |
+| **Impact** | 4 |
+| **Severity** | 16 — CRITICAL |
+| **Mitigation** | (1) Joint entities are first-class data model objects with explicit health state and data confidence. (2) When R_joint has data_confidence = LOW or health_state = UNKNOWN, all affected zone results are marked NOT_VERIFIABLE. (3) The ThermalUQ module (ROM tier) includes contact resistance as a primary uncertainty parameter in sensitivity analysis. (4) Sensitivity report ranks which joints most influence peak hotspot temperature so the engineer can prioritise measurement. |
+| **Owner** | Lead thermal engineer |
+| **Status** | OPEN |
+
+---
+
+### RISK-ENG-008 — Emissivity Assumption Error Causing Systematic Temperature Underprediction
+
+| Field | Value |
+|-------|-------|
+| **Category** | Engineering / Data Quality |
+| **Description** | Surface emissivity strongly influences radiative heat transfer in sealed and lightly vented enclosures. Bare aluminium may have emissivity below 0.1; painted or oxidised steel may be 0.7–0.9. Using the wrong emissivity value can cause systematic underprediction of wall temperatures. The validated LV switchgear CFD paper identified emissivity as a key error driver (~10 °C underprediction in hermetic configurations). |
+| **Likelihood** | 3 |
+| **Impact** | 4 |
+| **Severity** | 12 — HIGH |
+| **Mitigation** | (1) Emissivity is a first-class surface property in the geometry model, not a hard-coded constant. (2) The material library includes emissivity ranges for common finishes (bare, painted, oxidised) with explicit data confidence. (3) The ThermalUQ module includes emissivity as a primary uncertain parameter. (4) When emissivity is ASSUMED, affected surface temperatures carry a reduced-confidence flag. |
+| **Owner** | Lead thermal engineer |
+| **Status** | OPEN |
+
+---
+
+### RISK-ENG-009 — Arc-Flash Module Results Mistaken for a Formal Hazard Study
+
+| Field | Value |
+|-------|-------|
+| **Category** | Engineering / Legal / Safety |
+| **Description** | The IEEE 1584-2018 arc-flash screening module produces incident energy and PPE category values. A user could present these results in a safety label or work procedure without conducting a full arc-flash hazard analysis by a qualified person, creating unsafe working conditions and legal liability. |
+| **Likelihood** | 3 |
+| **Impact** | 5 |
+| **Severity** | 15 — HIGH |
+| **Mitigation** | (1) All arc-flash outputs carry a mandatory INFORMATIVE label (CR-ENG-007). (2) The report prominently states: "These results are a screening calculation only. A formal arc-flash hazard analysis per IEEE 1584-2018 and NFPA 70E must be performed by a qualified person before affixing arc-flash labels or establishing work practices." (3) The module cannot be configured to remove this disclaimer. (4) Legal review of the disclaimer text before release. |
+| **Owner** | Legal counsel + lead software engineer |
+| **Status** | OPEN |
+
+---
+
+### RISK-TECH-005 — ROM Surrogate Model Extrapolating Beyond Training Range
+
+| Field | Value |
+|-------|-------|
+| **Category** | Technical |
+| **Description** | The reduced-order model (ROM) trained over a parameter grid may be queried for parameter combinations outside the training range. Extrapolated ROM results can be wildly inaccurate and will not carry a convergence warning from the underlying thermal matrix solver. |
+| **Likelihood** | 3 |
+| **Impact** | 3 |
+| **Severity** | 9 — MEDIUM |
+| **Mitigation** | (1) BuildParametricROM stores the training parameter bounds in the ROM record. (2) ROM evaluator checks each query point against training bounds before evaluation; out-of-bounds queries return a EXTRAPOLATION_WARNING flag. (3) ROM results always carry a label stating the training parameter range and the fact that the result is a ROM approximation, not a full-order solve. (4) Benchmark BM-008 and uncertainty analysis runs validate ROM accuracy within the training range. |
+| **Owner** | Numerical methods specialist |
+| **Status** | OPEN |
+
+---
+
 ## 4. Risk Review Schedule
+
+| Milestone | Review Action |
+|-----------|--------------|
+| Milestone 1 | Initial register populated (this document). |
+| Milestone 5 | Review engineering risks after first solver implementation. |
+| Milestone 8 | Review after coupled thermal-airflow solver complete. |
+| Milestone 11 | Review after IEC TR 60890 module complete; legal review of IP risks. |
+| Milestone 13 | Review after Level 4 validation data imported. |
+| Each release | Full register review; update status, likelihood, impact. |
+
+---
 
 | Milestone | Review Action |
 |-----------|--------------|

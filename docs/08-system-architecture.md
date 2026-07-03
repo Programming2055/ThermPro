@@ -114,6 +114,7 @@ and key architectural decisions.
 | **PDF reports** | WeasyPrint | 60+ | HTML→PDF; CSS layout |
 | **XLSX export** | openpyxl | 3.x | Pure Python; full XLSX support |
 | **Object storage** | MinIO (dev) / AWS S3 (prod) | — | S3-compatible API |
+| **Heavy numerical arrays** | HDF5 (h5py) | 3.x | ROM snapshots, field data, UQ sample arrays; not suitable for PostgreSQL BLOB |
 | **Containerisation** | Docker + Docker Compose | — | Reproducible environments |
 
 ---
@@ -140,6 +141,9 @@ and key architectural decisions.
 | `reporting` | PDF and XLSX generation; report template management |
 | `datasets` | Import/export of library data; dataset versioning |
 | `audit` | Checksum calculation; immutable record locking; audit log |
+| `arc_flash` | IEEE 1584-2018 arc-flash screening; NFPA 70E output; informative label management |
+| `calibration` | Fit emissivity, contact resistance, fan curves against test data; UQ parameter export |
+| `rom` | ROM training trigger; reduced-order model storage and evaluation endpoint |
 
 ---
 
@@ -155,28 +159,36 @@ thermpro_engine/
 │   ├── input_v1.py          # Pydantic model for CalculationInput
 │   └── result_v1.py         # Pydantic model for CalculationResult
 ├── physics/
-│   ├── conduction.py        # Solid conduction conductances
+│   ├── conduction.py        # Solid conduction, shell conduction for thin walls
 │   ├── convection.py        # Natural and forced convection correlations
 │   ├── radiation.py         # Radiation conductances and linearisation
-│   ├── joule.py             # Resistance, Joule loss, harmonic multiplier
+│   ├── joule.py             # Resistance R(T), Joule loss, harmonic multiplier
+│   ├── joints.py            # Joint contact resistance R(T, health), degradation model
+│   ├── transformers.py      # Control transformer core + copper loss model
 │   ├── derating.py          # Derating curve interpolation
 │   └── air_properties.py    # Air property polynomials
 ├── network/
-│   ├── thermal_matrix.py    # Matrix assembly and solve
+│   ├── thermal_matrix.py    # Matrix assembly and solve (sparse CSR)
 │   ├── airflow_network.py   # Pressure node network and solve
 │   └── coupling.py          # Outer coupled iteration
 ├── modes/
 │   ├── iec_60890.py         # MODE 1: IEC TR 60890 calculation
 │   ├── nodal.py             # MODE 2: Nodal thermal network
 │   ├── forced_ventilation.py # MODE 3: Forced-ventilation network
-│   └── cfd_adapter.py       # MODE 4: CFD export/import adapter stub
+│   ├── cfd_adapter.py       # MODE 4: CFD export/import adapter stub
+│   └── arc_flash.py         # IEEE 1584-2018 screening; adiabatic I²t check
+├── rom/
+│   ├── build_rom.py         # BuildParametricROM algorithm; POD/RC extraction
+│   ├── evaluate_rom.py      # Fast ROM evaluator for parameter sweeps
+│   └── uq.py                # ThermalUQ: LHS/Sobol sampling, Sobol indices
 ├── validation/
-│   ├── applicability.py     # Pre-run eligibility checks
+│   ├── applicability.py     # Pre-run eligibility checks (incl. arc-flash scope check)
 │   ├── geometry.py          # Collision and topology checks
-│   └── data_quality.py      # Completeness and consistency checks
+│   └── data_quality.py      # Completeness, confidence, and consistency checks
 ├── postprocess/
 │   ├── hotspots.py          # Hot-spot detection and ranking
-│   ├── margins.py           # Thermal margin calculation
+│   ├── margins.py           # Thermal margin calculation (IEC and UL/ANSI profiles)
+│   ├── compliance.py        # Standard-profile-aware compliance interpretation
 │   └── convergence.py       # Convergence trace assembly
 └── solver.py                # Top-level solve() entry point
 ```
@@ -221,6 +233,10 @@ Key endpoint groups:
 | Results | `GET /api/v1/calculations/{id}/results`, `GET /api/v1/calculations/{id}/hotspots` |
 | Libraries | `GET /api/v1/libraries/devices`, `POST /api/v1/libraries/devices/import` |
 | Reports | `POST /api/v1/reports/pdf`, `GET /api/v1/reports/{id}/download` |
+| Arc-flash | `POST /api/v1/arc-flash/screen`, `GET /api/v1/arc-flash/{id}/results` |
+| Calibration | `POST /api/v1/calibration/fit`, `GET /api/v1/calibration/{id}/sensitivity` |
+| ROM | `POST /api/v1/rom/build`, `POST /api/v1/rom/{id}/evaluate`, `GET /api/v1/rom/{id}/status` |
+| Extensibility | `POST /api/v1/plugins/register`, `GET /api/v1/plugins` (future; plugin turbulence model, material law, or custom component) |
 
 ### 6.2 WebSocket
 

@@ -160,10 +160,29 @@ manufacturer data or IEC 60287. K_AC ≥ 1.0.
 For each joint or terminal connection:
 
 ```
-P_joint = I² · R_joint                       [W]
+P_joint = I² · R_joint(T, health)            [W]
 ```
 
-R_joint is taken from manufacturer data or standard contact resistance tables (user-provided dataset required).
+R_joint is temperature-dependent and modified by a health-state degradation factor:
+
+```
+R_joint(T, health) = R_joint_ref · [1 + α_contact · (T − T_ref)] · f_health   [Ω]
+```
+
+where:
+- `R_joint_ref` [Ω]: nominal contact resistance at T_ref from manufacturer data or standard tables (user-provided dataset required).
+- `α_contact` [1/K]: temperature coefficient for contact resistance (may differ from bulk conductor α; use measured or ASSUMED value with LOW confidence flag).
+- `f_health` [—]: health-state modifier, 1.0 for NOMINAL, user-specified value > 1.0 for DEGRADED, 1.0 (with UNKNOWN flag) when health state is unknown.
+
+**Dimensional check:**  
+`[Ω] · [1 + (1/K) · K] · [—] = [Ω]  ✓`
+
+**Implementation note:** Each joint is a first-class entity in the data model with its own
+temperature, resistance, and health state. Joint losses are never subsumed into the
+surrounding busbar segment's bulk resistivity (CR-ENG-008).
+
+**Uncertainty note:** Contact resistance is a primary uncertainty driver. When R_joint_ref
+is ASSUMED, the result carries a NOT_VERIFIABLE flag for the affected zone.
 
 ### 4.6 Per-Segment Busbar Loss
 
@@ -214,7 +233,29 @@ P_device(I) = P_n · (I / I_n)²               [W]
 This is a simplification. The software shall flag it as ASSUMED when manufacturer
 load-loss data are absent.
 
-### 5.4 Derating Iteration
+### 5.4 Control Transformer Loss Model
+
+A control transformer dissipates heat through two independent mechanisms:
+
+```
+P_core  = P_0                                [W]   (no-load core loss)
+P_copper(I) = P_cu_rated · (I / I_n)²       [W]   (load-dependent copper loss)
+P_transformer = P_core + P_copper(I)         [W]
+```
+
+where:
+- `P_0` [W]: no-load (iron/core) loss from manufacturer data; constant regardless of load.
+- `P_cu_rated` [W]: rated copper loss at rated current I_n.
+- `I / I_n` [—]: load factor; apply diversity factor where appropriate.
+
+**Dimensional check:**  
+`[W] + [W] · ([A]/[A])² = [W]  ✓`
+
+**Implementation note:** Control transformers must be modelled as separate heat sources,
+not combined with the main busbar losses. Their persistent no-load component means they
+heat adjacent compartments even at light electrical load.
+
+### 5.5 Derating Iteration
 
 Device derating factor f_d (0 < f_d ≤ 1) is applied to the rated current:
 
@@ -612,14 +653,131 @@ temperature, minutes for air cells, hours for heavy busbars).
 
 ---
 
-## 15. Dimensional Check Summary
+## 16. Fault and Short-Circuit Heating
+
+### 16.1 Adiabatic Conductor-Heating Check
+
+For short fault durations (≤ 1 s for copper; ≤ 0.5 s for aluminium is a conservative
+guide), the conductor temperature rise can be approximated as adiabatic:
+
+```
+I_fault² · t_fault = K_material² · A_cs²    [A²·s]
+
+Equivalently:
+ΔT_adiabatic = (I_fault² · t_fault · ρ_e_ref) / (A_cs² · c_vol)   [K]
+
+c_vol = ρ_mass · cp                           [J/(m³·K)]
+```
+
+where:
+- `I_fault` [A]: prospective fault current (from IEC 60909 or ANSI calculation; engineer input).
+- `t_fault` [s]: fault clearing time from protective device.
+- `A_cs` [m²]: conductor cross-sectional area.
+- `ρ_e_ref` [Ω·m]: resistivity at reference temperature.
+- `c_vol` [J/(m³·K)]: volumetric heat capacity.
+
+**Dimensional check:**  
+`[A²] · [s] · [Ω·m] / ([m²]² · [J/(m³·K)]) = [A²·s·(V·m/A)] / [m·J/K]`  
+`= [W·s·m] / [m·J/K] = [J/J] · K = [K]  ✓`
+
+**Acceptance check:**  
+PASS if ΔT_adiabatic + T_initial ≤ T_conductor_limit_fault.  
+The fault current and clearing time are engineer-entered inputs; ThermPro performs the
+screening calculation only.
+
+### 16.2 IEEE 1584-2018 Arc-Flash Incident Energy
+
+The arc-flash module uses the IEEE 1584-2018 parametric model. The full equation set
+is not reproduced here; the licensed standard is required. The structural form is:
+
+```
+I_arc = f(I_bf, V_sys, gap, config)          [kA]
+
+E = f(I_arc, t_arc, D, config, enclosure)    [cal/cm²]
+
+D_AFB = f(E, t_arc, config, enclosure)       [m]
+```
+
+where:
+- `I_bf` [kA]: bolted fault current (engineer input).
+- `V_sys` [kV]: system voltage.
+- `gap` [mm]: electrode gap (configuration-dependent).
+- `config`: electrode configuration (VCB, VCBB, HCB, VOA, HOA).
+- `t_arc` [s]: arc duration from protective device clearing time.
+- `D` [m]: working distance.
+- `E` [cal/cm²]: incident energy at working distance.
+- `D_AFB` [m]: arc-flash protection boundary.
+
+**IMPORTANT:** Numerical coefficients for the IEEE 1584-2018 model are NOT reproduced
+in this document. The licensed standard (IEEE 1584-2018) is required. ThermPro
+implements the model structure; coefficient values must be entered by the engineer or
+imported from a licensed dataset.
+
+**Dimensional check:** Per IEEE 1584-2018 equations (SI inputs; verify units per standard).
+
+---
+
+## 17. Turbulence Model Selection
+
+The nodal thermal network solver (MODE 2/3) uses the Boussinesq approximation for
+natural convection. The following table guides turbulence model selection for the MODE 4
+CFD export adapter and future high-fidelity solver tiers.
+
+| Flow regime | Indicative Ra or Re | Recommended model | Notes |
+|-------------|--------------------|--------------------|-------|
+| Sealed enclosure, moderate Ra | Ra < 10⁷ | Laminar + Boussinesq | Default for MODE 2/3 nodal solver |
+| Sealed enclosure, higher Ra | 10⁷ ≤ Ra ≤ 10¹⁰ | k-ω SST | Better wall treatment for natural convection |
+| Vented enclosure, buoyancy-driven | Ra > 10⁸ | k-ω SST | Mixed boundary-layer and free-stream |
+| Forced-ventilation duct | Re > 10 000 | k-ε or k-ω SST | Gnielinski is used in MODE 3 for simple ducts |
+| Research/high-fidelity CFD | Any | LES/DES | MODE 4 CFD export only; not MODE 2/3 |
+
+**De Vahl Davis cavity reference:** For a square cavity with differentially heated vertical
+walls and air at Ra = 10⁶, the average Nusselt number is approximately **Nu ≈ 8.8**
+(de Vahl Davis, 1983; verified by benchmark BM-007). Any buoyancy solver implementation
+shall reproduce this value within ±2% before deployment.
+
+---
+
+## 18. Shell Conduction for Thin Walls
+
+For thin metal partitions and enclosure walls where the thickness L_wall is much smaller
+than the partition height H (typically L_wall / H < 1/50), the wall is represented as a
+shell with embedded thermal resistance:
+
+```
+G_wall = k_wall · A_wall / L_wall            [W/K]   (same as slab; no thickness cells)
+
+Q_through = G_wall · (T_hot_side − T_cold_side)  [W]
+```
+
+The shell is assigned to its mid-surface in the thermal network. No volumetric cells
+are created for the wall thickness. The thermal mass of the wall (for transient analysis)
+is lumped as a nodal capacitance at the mid-surface node:
+
+```
+C_wall = ρ_wall · cp_wall · A_wall · L_wall  [J/K]
+```
+
+**Dimensional check:**  
+`[kg/m³] · [J/(kg·K)] · [m²] · [m] = [J/K]  ✓`
+
+This treatment reduces cell count by an order of magnitude for steel-walled assemblies
+with 1.5–3 mm wall thickness. It is the mandatory approach for partitions and doors in
+the nodal thermal solver. It is also aligned with the Fluent shell-conduction feature
+referenced in validated LV switchgear CFD literature.
+
+---
+
+## 19. Dimensional Check Summary (Updated)
 
 | Equation | LHS Unit | RHS Unit | Status |
 |----------|----------|----------|--------|
 | Q_cond = G · ΔT | W | (W/K) · K | ✓ |
 | G_cond = k A / L | W/K | (W/(m·K)) · m² / m | ✓ |
 | R(T) = R_ref[1+α(T−T_ref)] | Ω | Ω · [1+(1/K)·K] | ✓ |
+| R_joint(T,health) = R_ref·[1+α·ΔT]·f_health | Ω | Ω · [—] · [—] | ✓ |
 | P = I² R | W | A² · Ω | ✓ |
+| P_transformer = P_0 + P_cu·(I/I_n)² | W | W + W·[—] | ✓ |
 | Gr = g β ΔT L³/ν² | — | (m/s²)(1/K)(K)(m³)/(m²/s)² | ✓ |
 | h = Nu λ_f / L_c | W/(m²·K) | (—)(W/(m·K))/(m) | ✓ |
 | Q_conv = h A ΔT | W | (W/(m²·K)) m² K | ✓ |
@@ -631,10 +789,12 @@ temperature, minutes for air cells, hours for heavy busbars).
 | ΔP_stack = ρ g H | Pa | (kg/m³)(m/s²)(m) | ✓ |
 | G·T = Q | W | (W/K)·K | ✓ |
 | C dT/dt = Q + Σ G ΔT | W | (J/K)(K/s) = W | ✓ |
+| ΔT_adiabatic = I²·t·ρ_e/(A²·c_vol) | K | A²·s·(Ω·m)/[m⁴·J/(m³·K)] | ✓ |
+| C_wall = ρ·cp·A·L | J/K | (kg/m³)·(J/(kg·K))·m²·m | ✓ |
 
 ---
 
-## 16. Equation Version Control
+## 20. Equation Version Control
 
 Every change to a correlation or equation in this document must increment the document
 revision and be recorded in the change log. Calculation runs reference the equation
