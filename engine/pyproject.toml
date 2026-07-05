@@ -15,6 +15,9 @@ packages = ["thermal_core"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "periodic_physics: physics-accuracy benchmarks; run pre-release only, not on every push (DR-010)",
+]
 
 [tool.mypy]
 strict = true

@@ -13,6 +13,9 @@ packages = ["src/thermpro_units"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "units: unit conversion tests (UT-UNITS-001 through UT-UNITS-010)",
+]
 
 [tool.mypy]
 strict = true
