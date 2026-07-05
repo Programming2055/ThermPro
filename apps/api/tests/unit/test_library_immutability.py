@@ -14,8 +14,8 @@ from thermpro_api.services.library import LibraryImmutabilityError, LibraryServi
 
 
 def _make_release(status: str) -> LibraryRelease:
-    """Create a minimal LibraryRelease stub."""
-    r = LibraryRelease.__new__(LibraryRelease)
+    """Create a minimal LibraryRelease stub using MagicMock to avoid ORM mapper issues."""
+    r = MagicMock(spec=LibraryRelease)
     r.id = uuid.uuid4()
     r.library_name = "MaterialLibrary"
     r.version = "1.0.0"
