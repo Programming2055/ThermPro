@@ -1,0 +1,124 @@
+.page {
+  max-width: 1100px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.heading {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.sub {
+  font-size: 0.82rem;
+  color: #718096;
+  margin-bottom: 1.25rem;
+}
+
+.primaryBtn {
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  background: #2b6cb0;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 0.375rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.primaryBtn:hover {
+  background: #2c5282;
+}
+
+.message {
+  color: #718096;
+  font-size: 0.875rem;
+  margin-top: 1rem;
+}
+
+.error {
+  color: #c53030;
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  background: #fff5f5;
+  border: 1px solid #fc8181;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.table th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
+  color: #4a5568;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #2d3748;
+  vertical-align: middle;
+}
+
+.table tr:hover td {
+  background: #f7fafc;
+}
+
+.nameCell {
+  font-weight: 600;
+}
+
+.descCell {
+  color: #718096;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dateCell {
+  color: #718096;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  background: #edf2f7;
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: #2d3748;
+}
+
+.hash {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: #718096;
+}
+
+@media (prefers-color-scheme: dark) {
+  .heading { color: #e2e8f0; }
+  .table th { color: #a0aec0; border-bottom-color: #2d3748; }
+  .table td { color: #e2e8f0; border-bottom-color: #2d3748; }
+  .table tr:hover td { background: #1a202c; }
+  .code { background: #2d3748; color: #e2e8f0; }
+}

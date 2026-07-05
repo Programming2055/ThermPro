@@ -89,16 +89,28 @@ Every domain entity inherits the following base fields:
 | name | string | Project name |
 | customer | string | |
 | assembly_designation | string | |
-| standard_edition_id | UUID | FK → StandardEdition |
+| standard_profile | string[] | Ordered list of active standards, e.g. ["IEC_61439_2", "IEC_TR_60890", "IEEE_1584_2018"]. Determines which compliance rules and temperature limits are applied. |
 | system_voltage_V | float | [V] |
 | frequency_Hz | float | [Hz] |
-| ambient_temperature_max_C | float | [°C] |
-| ambient_temperature_min_C | float | [°C] |
-| reference_temperature_C | float | [°C], typically 20 °C or 35 °C |
-| altitude_m | float | [m] above sea level |
+| reference_temperature_C | float | [°C], typically 20 °C for resistance or 35 °C for IEC 61439 |
 | installation_type | enum | INDOOR, OUTDOOR |
 | ip_rating | string | e.g. "IP54" |
 | status | enum | DRAFT, IN_REVIEW, APPROVED, ARCHIVED |
+
+#### 4.1.1 Service Conditions (embedded sub-object within Project)
+
+Service conditions are stored as a structured sub-object `service_conditions` on the
+Project entity. Default values per IEC 61439-1 Table 1 are shown.
+
+| Field | Type | Default | Notes |
+|-------|------|---------|-------|
+| ambient_temperature_max_C | float | 40.0 | Maximum ambient [°C] |
+| ambient_temperature_avg_24h_C | float | 35.0 | 24-hour average ambient [°C]; IEC 61439 limit |
+| ambient_temperature_min_C | float | −5.0 | Minimum ambient [°C] |
+| relative_humidity_max_percent | float | 50.0 | At +40 °C; higher values permitted at lower T |
+| altitude_m | float | 0.0 | [m] above sea level; correction applied above 2000 m |
+| pollution_degree | integer | 3 | Per IEC 60664-1; indoor industrial assemblies typically PD3 |
+| special_conditions | string | null | Free-text: dust, corrosive vapours, condensation, etc. |
 
 ### 4.2 Assembly
 
@@ -264,7 +276,33 @@ Every domain entity inherits the following base fields:
 | current_A | float | RMS current on this segment |
 | orientation | enum | HORIZONTAL_FLAT, HORIZONTAL_EDGE, VERTICAL |
 
-### 4.13 ThermalCell
+### 4.13 BusbarJoint
+
+A busbar joint represents an explicit bolted connection between two busbar segments,
+or between a busbar and a device terminal. Each joint is a separate thermal and
+electrical entity with its own contact resistance and health state.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| id | UUID | PK |
+| busbar_run_id | UUID | FK → BusbarRun |
+| segment_a_id | UUID | FK → BusbarSegment (first side) |
+| segment_b_id | UUID | FK → BusbarSegment (second side; null for terminal joints) |
+| compartment_id | UUID | Compartment containing this joint |
+| x_mm, y_mm, z_mm | float | Joint centroid position |
+| contact_resistance_ref_ohm | float | R_joint at T_ref; from manufacturer or ASSUMED |
+| temp_coefficient_contact_1_K | float | α for contact resistance; ASSUMED if unknown |
+| temp_ref_C | float | Reference temperature for contact resistance |
+| health_state | enum | NOMINAL, DEGRADED, UNKNOWN |
+| health_state_modifier | float | f_health; 1.0 = nominal; >1.0 = degraded |
+| assembly_torque_Nm | float | Recorded assembly torque (informational) |
+| torque_specification_Nm | float | Specified torque from manufacturer |
+| torque_compliance | enum | COMPLIANT, NON_COMPLIANT, NOT_CHECKED |
+| data_confidence | enum | HIGH, MEDIUM, LOW, UNKNOWN |
+| source_document | string | |
+| notes | string | |
+
+### 4.14 ThermalCell
 
 | Field | Type | Notes |
 |-------|------|-------|
@@ -389,10 +427,20 @@ Immutable. Created at calculation submission time.
   "schema_version": "1.0",
   "snapshot_timestamp": "2026-07-03T10:00:00Z",
   "project_id": "<uuid>",
+  "standard_profile": ["IEC_61439_2", "IEC_TR_60890"],
+  "service_conditions": {
+    "ambient_temperature_max_C": 40.0,
+    "ambient_temperature_avg_24h_C": 35.0,
+    "ambient_temperature_min_C": -5.0,
+    "relative_humidity_max_percent": 50.0,
+    "altitude_m": 0.0,
+    "pollution_degree": 3
+  },
   "enclosure_geometry": { ... },
   "compartments": [ ... ],
   "devices": [ ... ],
   "busbars": [ ... ],
+  "busbar_joints": [ ... ],
   "fans": [ ... ],
   "openings": [ ... ],
   "electrical_loading": { ... },

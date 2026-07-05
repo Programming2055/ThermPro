@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "thermpro-units"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/thermpro_units"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "units: unit conversion tests (UT-UNITS-001 through UT-UNITS-010)",
+]
+
+[tool.mypy]
+strict = true

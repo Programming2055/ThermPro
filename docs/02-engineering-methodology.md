@@ -102,7 +102,15 @@ dataset. See THERM-STD-001 §5.
 | α | Temperature coefficient of resistance | 1/K | Cu: 3.93×10⁻³; Al: 4.03×10⁻³ |
 | ρ_e | Electrical resistivity | Ω·m | |
 | K_AC | AC resistance multiplier | — | Skin + proximity effect; K_AC ≥ 1 |
-| R_joint | Joint resistance | Ω | Per bolted or welded joint |
+| R_joint | Joint resistance | Ω | Per bolted or welded joint; temperature-dependent and health-modified |
+| f_health | Joint health-state modifier | — | 1.0 = nominal; > 1.0 = degraded; multiplies R_joint |
+| P_core | Transformer core (no-load) loss | W | Constant regardless of load |
+| P_cu | Transformer copper (load) loss | W | At rated current I_n |
+| I_fault | Prospective fault current | A | From IEC 60909 or ANSI calculation; engineer input |
+| t_fault | Fault clearing time | s | From protective device characteristic; engineer input |
+| c_vol | Volumetric heat capacity | J/(m³·K) | c_vol = ρ_mass × cp |
+| E_arc | Arc-flash incident energy | cal/cm² | IEEE 1584-2018 output at specified working distance |
+| D_AFB | Arc-flash protection boundary | m | IEEE 1584-2018 output |
 | f_d | Derating factor | — | f_d = I_permissible / I_n; 0 < f_d ≤ 1 |
 | I_perm | Permissible current | A | I_perm = f_d × I_n |
 | ṁ | Mass flow rate | kg/s | |
@@ -548,6 +556,116 @@ ThermPro is NOT applicable to:
 
 ---
 
+## 13. Tiered Solver Stack
+
+ThermPro is structured as a tiered solver stack. Each tier serves a different workflow.
+All tiers share the same domain model, input schema, and compliance interpretation layer.
+
+| Tier | Name | Method | Speed | Use Case |
+|------|------|--------|-------|----------|
+| Tier 1 | Reduced-Order Model (ROM) | RC network / POD surrogate | Sub-second | Parametric sweeps, real-time design screening, uncertainty quantification |
+| Tier 2 | Nodal Thermal Network + Airflow | Sparse matrix; pressure network | Seconds to minutes | MODE 2/3 standard design calculations (primary solver) |
+| Tier 3 | CFD Export/Import Adapter | External high-fidelity solver | Minutes to hours | MODE 4 validation-grade analyses using licensed CFD tool |
+| Tier 4 (future) | Coupled EM-Thermal-CFD | FEM + FVM; external | Hours | Research and reference benchmarks |
+
+### 13.1 Tier 1 — Reduced-Order Model (ROM) Architecture
+
+The ROM tier supports:
+- Parametric design screening over continuous ranges of load, ambient temperature, vent area, fan state, emissivity, and contact resistance.
+- Uncertainty quantification (UQ) using Latin Hypercube Sampling (LHS) or Sobol sequences.
+- Real-time evaluation for interactive design optimization.
+
+The ROM is built from a grid of high-fidelity (Tier 2) solver runs using the
+`BuildParametricROM` algorithm:
+
+```text
+Algorithm BuildParametricROM
+Input:
+    Parameter grid p = {load_factor, ambient_C, vent_area_m2, emissivity, R_joint}
+    High-fidelity solver (Tier 2)
+Output:
+    ROM(p), error_estimator, training_bounds
+
+For each design point p_i in the parameter grid:
+    Run Tier 2 solver
+    Collect: T_field, max_hotspot, compliance_margins, airflow_field
+
+Construct basis (select one method):
+    - POD/SVD on temperature snapshots
+    - RC network extraction from conductance/capacitance matrices
+    - Piecewise-linear response surface (for small parameter spaces)
+
+Validate ROM:
+    Compare ROM against withheld high-fidelity runs
+    Compute: max hotspot error, RMSE, settling-time error
+
+Store: ROM coefficients, training_bounds, error_estimator
+Enforce: ROM evaluations outside training_bounds return EXTRAPOLATION_WARNING
+```
+
+### 13.2 Tier 1 — Uncertainty Quantification (ThermalUQ)
+
+The ThermalUQ algorithm quantifies sensitivity of the thermal result to uncertain inputs:
+
+```text
+Algorithm ThermalUQ
+Input:
+    Uncertain inputs U = {R_joint, emissivity, ambient_C, vent_blockage_fraction,
+                          fan_curve_deviation, load_factor}
+    Solver S: ROM (fast) or Tier 2 (accurate)
+    Sampling plan: N samples (LHS or Sobol sequence)
+Output:
+    Sobol sensitivity indices (ranked)
+    Confidence intervals on: T_max, compliance_margin, hotspot temperature
+    Ranked uncertainty report
+
+Procedure:
+1. Generate N parameter samples using LHS or Sobol sequence over U
+2. For each sample u_i: run S(u_i); collect T_max, compliance_margin, zone temperatures
+3. Compute variance decomposition:
+      S_i = Var(E[Y|u_i]) / Var(Y)          (first-order Sobol index)
+      S_T_i = 1 - Var(E[Y|U_-i]) / Var(Y)  (total Sobol index)
+4. Report percentile envelopes: 5th, 50th, 95th percentile of outputs
+5. Rank uncertain inputs by S_T_i
+6. Identify which measurements would most reduce output uncertainty
+
+Output report states clearly: "These confidence intervals reflect model-input uncertainty
+only, not model-form uncertainty. Physical test comparison (Level 4 validation) is
+required to bound total prediction uncertainty."
+```
+
+**Primary uncertainty drivers (ranked by typical influence in LV switchgear):**
+1. Contact resistance (R_joint) — especially for joints with health_state = UNKNOWN.
+2. Surface emissivity — especially for bare aluminium and mixed-finish interiors.
+3. Ventilation opening blockage fraction.
+4. Fan curve deviation from rated values.
+5. Ambient temperature (specifically the 24-hour average).
+6. Load diversity and simultaneity factors.
+
+### 13.3 Turbulence Model Selection
+
+The nodal thermal network solver uses the Boussinesq approximation. The following
+selection guide applies when MODE 4 is used to export boundary conditions to a
+CFD solver, or when the Tier 4 solver is active:
+
+| Regime | Indicative Ra | Recommended model |
+|--------|--------------|-------------------|
+| Sealed enclosure, low–moderate Ra | Ra < 10⁷ | Laminar + Boussinesq |
+| Sealed enclosure, higher Ra | 10⁷ ≤ Ra ≤ 10¹⁰ | k-ω SST |
+| Vented enclosure, buoyancy-driven | Ra > 10⁸ | k-ω SST |
+| Forced ventilation, duct flow | Re > 10 000 | Standard k-ε or k-ω SST |
+| Research / validation benchmark | Any | LES (research tier only) |
+
+The k-ω SST model is the recommended RANS option for natural-convection switchgear
+enclosures because it provides improved near-wall treatment compared to k-ε and reduced
+free-stream sensitivity compared to standard k-ω (Menter, 1994).
+
+**De Vahl Davis cavity benchmark:** Any buoyancy solver implementation must reproduce
+Nu_avg ≈ 8.80 at Ra = 10⁶ (de Vahl Davis, 1983) within ±2% before deployment
+(see BM-007 in THERM-VAL-001).
+
+---
+
 ## A. Recommended MVP Scope
 
 The Minimum Viable Product (MVP) comprises Milestones 1–5 plus basic display:
@@ -585,7 +703,9 @@ identify data requirements. It must not be used for production engineering.
 | Solar load calculation | Specialist input; deferred to a specific later feature |
 | Real-time SCADA integration | Requires external system interface; deferred |
 | Physical test import (Level 4 validation) | Requires test data; infrastructure built in Milestone 13 |
-| Sensitivity analysis | Planned for Milestone 12 |
+| ROM / UQ (BuildParametricROM, ThermalUQ) | Requires completed Tier 2 solver as training basis; planned for Milestone 12 |
+| Arc-flash module (IEEE 1584-2018) | Requires legal review and licensed coefficient handling; planned for Milestone 11 or later |
+| North American UL/ANSI compliance interpretation | Standard-profile-aware compliance layer; planned for Milestone 9 post-processing |
 | Multi-user collaboration | Single-user MVP; multi-user in later phase |
 | Mobile / tablet view | Desktop-first; mobile read-only view deferred |
 | API for third-party integration | Internal API is built; documented public API later |

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "thermpro-engine"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "thermpro-units",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["thermal_core"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "periodic_physics: physics-accuracy benchmarks; run pre-release only, not on every push (DR-010)",
+]
+
+[tool.mypy]
+strict = true

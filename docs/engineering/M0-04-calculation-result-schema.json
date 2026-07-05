@@ -1,0 +1,431 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thermpro.example.com/schemas/calculation-result/v1.0",
+  "title": "ThermPro Calculation ResultSnapshot v1.0",
+  "description": "Versioned calculation result returned by thermpro_engine. See THERM-DAT-001 Rev 0.2.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "mode",
+    "status",
+    "engine_version",
+    "standard_profile",
+    "solver_summary",
+    "temperatures",
+    "hotspots",
+    "compliance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+
+    "run_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier of this calculation run. Links back to CalculationRun record."
+    },
+
+    "mode": {
+      "type": "string",
+      "enum": ["MODE_1", "MODE_2", "MODE_3", "MODE_4"],
+      "description": "Calculation mode. ARC_FLASH removed from MVP scope (DR-008)."
+    },
+
+    "status": {
+      "type": "string",
+      "enum": ["CONVERGED", "NON_CONVERGED", "FAILED", "CANCELLED"],
+      "description": "NON_CONVERGED means solver ran but did not meet convergence criteria. UI must show RESULT INVALID watermark."
+    },
+
+    "engine_version": {
+      "type": "string",
+      "description": "Semantic version of thermpro_engine that produced this result.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+
+    "standard_profile": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Standards profiles active for this result. MVP scope only (DR-007, DR-008). UL/ANSI/IEEE 1584-2018 deferred.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "IEC_61439_1",
+          "IEC_61439_2",
+          "IEC_TR_60890",
+          "MANUFACTURER_LIMITS",
+          "PROJECT_DEFINED"
+        ]
+      }
+    },
+
+    "failure_reason": {
+      "type": ["string", "null"],
+      "description": "Human-readable reason for FAILED or NON_CONVERGED status. Null if CONVERGED."
+    },
+
+    "solver_summary": {
+      "type": "object",
+      "description": "Top-level solver performance summary.",
+      "required": [
+        "outer_iterations_used",
+        "inner_iterations_total",
+        "wall_clock_s",
+        "final_max_delta_T_K",
+        "final_energy_imbalance_fraction",
+        "final_mass_imbalance_fraction"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "outer_iterations_used": { "type": "integer", "minimum": 0 },
+        "inner_iterations_total": { "type": "integer", "minimum": 0 },
+        "wall_clock_s": { "type": "number", "minimum": 0 },
+        "final_max_delta_T_K": {
+          "type": "number",
+          "description": "Maximum temperature change in final outer iteration [K]."
+        },
+        "final_energy_imbalance_fraction": {
+          "type": "number",
+          "description": "Fractional energy imbalance at termination."
+        },
+        "final_mass_imbalance_fraction": {
+          "type": ["number", "null"],
+          "description": "Fractional mass-flow imbalance at termination. Null for MODE_1 (no airflow network)."
+        },
+        "convergence_trace": {
+          "type": "array",
+          "description": "Per-outer-iteration convergence history.",
+          "items": { "$ref": "#/$defs/ConvergenceIteration" }
+        }
+      }
+    },
+
+    "temperatures": {
+      "type": "object",
+      "description": "Temperature results for all modelled entities.",
+      "required": ["ambient_K", "entities"],
+      "additionalProperties": false,
+      "properties": {
+        "ambient_K": {
+          "type": "number",
+          "description": "Ambient temperature used by solver [K]. = ambient_temperature_max_C + 273.15."
+        },
+        "entities": {
+          "type": "array",
+          "description": "Temperature result for each entity with a thermal node.",
+          "items": { "$ref": "#/$defs/EntityTemperature" }
+        },
+        "thermal_cells": {
+          "type": "array",
+          "description": "Air cell temperatures (grid cells within compartments).",
+          "items": { "$ref": "#/$defs/CellTemperature" }
+        }
+      }
+    },
+
+    "hotspots": {
+      "type": "array",
+      "description": "Entities with temperature exceeding their rated maximum.",
+      "items": { "$ref": "#/$defs/Hotspot" }
+    },
+
+    "derating": {
+      "type": "array",
+      "description": "Derating recommendations for each device and busbar.",
+      "items": { "$ref": "#/$defs/DeratingRecommendation" }
+    },
+
+    "compliance": {
+      "type": "object",
+      "description": "Standards compliance check results.",
+      "required": ["overall_compliant", "checks"],
+      "additionalProperties": false,
+      "properties": {
+        "overall_compliant": {
+          "type": "boolean",
+          "description": "True only if all checks PASS or INFORMATIVE."
+        },
+        "checks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ComplianceCheck" }
+        }
+      }
+    },
+
+    "airflow": {
+      "type": ["object", "null"],
+      "description": "Airflow network results. Null for MODE_1 and MODE_2.",
+      "additionalProperties": false,
+      "properties": {
+        "total_flow_rate_m3s": { "type": "number" },
+        "fan_operating_points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["fan_id", "flow_rate_m3s", "static_pressure_Pa"],
+            "properties": {
+              "fan_id": { "type": "string", "format": "uuid" },
+              "flow_rate_m3s": { "type": "number" },
+              "static_pressure_Pa": { "type": "number" }
+            }
+          }
+        },
+        "opening_flows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["opening_id", "flow_rate_m3s", "direction"],
+            "properties": {
+              "opening_id": { "type": "string", "format": "uuid" },
+              "flow_rate_m3s": { "type": "number" },
+              "direction": { "type": "string", "enum": ["IN", "OUT"] }
+            }
+          }
+        },
+        "buoyancy_stack_pressure_Pa": {
+          "type": ["number", "null"],
+          "description": "Net buoyancy-driven stack pressure [Pa]."
+        }
+      }
+    },
+
+    "library_manifest_echo": {
+      "type": ["object", "null"],
+      "description": "Echo of the library_manifest submitted with the InputSnapshot. Stored for audit purposes. Null if not supplied (pre-DR-002 runs).",
+      "additionalProperties": true
+    },
+
+    "sensitivity_summary": {
+      "type": ["object", "null"],
+      "description": "Summary of sensitivity scenario results when run_sensitivity_scenarios = true in solver_settings. Null if not run.",
+      "additionalProperties": false,
+      "properties": {
+        "scenarios_run": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["scenario_name", "status", "max_temperature_K", "hotspot_count"],
+            "properties": {
+              "scenario_name": { "type": "string" },
+              "status": { "type": "string", "enum": ["CONVERGED", "NON_CONVERGED", "FAILED"] },
+              "max_temperature_K": { "type": "number" },
+              "hotspot_count": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+
+    "k_ac_warnings": {
+      "type": "array",
+      "description": "Non-suppressible warnings for busbar segments where K_AC = 1.0 was applied (no qualified source available). DR-003.",
+      "items": {
+        "type": "object",
+        "required": ["segment_id", "warning_code", "message"],
+        "properties": {
+          "segment_id": { "type": "string", "format": "uuid" },
+          "warning_code": { "type": "string", "const": "K_AC_UNITY_FALLBACK" },
+          "message": { "type": "string" }
+        }
+      }
+    },
+
+    "mode_1_result": {
+      "type": ["object", "null"],
+      "description": "IEC TR 60890 specific outputs. Null unless mode = MODE_1.",
+      "additionalProperties": false,
+      "properties": {
+        "P_total_W": { "type": "number", "description": "Total internal power loss [W]." },
+        "delta_theta_i_K": { "type": "number", "description": "Internal temperature rise [K]." },
+        "delta_theta_e_K": { "type": "number", "description": "External surface temperature rise [K]." },
+        "delta_theta_total_K": { "type": "number", "description": "Total temperature rise [K]." },
+        "coefficient_c": { "type": "number", "description": "CT145 enclosure coefficient c." },
+        "effective_cooling_area_m2": { "type": "number" }
+      }
+    }
+  },
+
+  "$defs": {
+
+    "ConvergenceIteration": {
+      "type": "object",
+      "required": ["iteration", "max_delta_T_K", "inner_iterations", "energy_imbalance_W"],
+      "additionalProperties": false,
+      "properties": {
+        "iteration": { "type": "integer", "minimum": 1 },
+        "max_delta_T_K": { "type": "number" },
+        "inner_iterations": { "type": "integer", "minimum": 0 },
+        "energy_imbalance_W": { "type": "number" },
+        "mass_imbalance_fraction": { "type": ["number", "null"] }
+      }
+    },
+
+    "EntityTemperature": {
+      "type": "object",
+      "required": ["entity_id", "entity_type", "temperature_K", "temperature_rise_K"],
+      "additionalProperties": false,
+      "properties": {
+        "entity_id": { "type": "string", "format": "uuid" },
+        "entity_type": {
+          "type": "string",
+          "enum": ["DEVICE", "BUSBAR_SEGMENT", "BUSBAR_JOINT", "CONDUCTOR", "SURFACE", "FAN"]
+        },
+        "name": { "type": ["string", "null"] },
+        "temperature_K": {
+          "type": "number",
+          "description": "Absolute temperature of entity [K]. Must be > 0."
+        },
+        "temperature_C": {
+          "type": "number",
+          "description": "Convenience field: temperature_K - 273.15 [°C]."
+        },
+        "temperature_rise_K": {
+          "type": "number",
+          "description": "Temperature rise above ambient [K]."
+        },
+        "power_loss_W": {
+          "type": ["number", "null"],
+          "description": "Calculated Joule loss for this entity [W]."
+        }
+      }
+    },
+
+    "CellTemperature": {
+      "type": "object",
+      "required": ["cell_id", "compartment_id", "centre_x_m", "centre_y_m", "centre_z_m", "temperature_K"],
+      "additionalProperties": false,
+      "properties": {
+        "cell_id": { "type": "string", "format": "uuid" },
+        "compartment_id": { "type": "string", "format": "uuid" },
+        "centre_x_m": { "type": "number" },
+        "centre_y_m": { "type": "number" },
+        "centre_z_m": { "type": "number" },
+        "temperature_K": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+
+    "Hotspot": {
+      "type": "object",
+      "required": [
+        "entity_id",
+        "entity_type",
+        "temperature_K",
+        "temperature_rise_K",
+        "limit_K",
+        "excess_K",
+        "severity"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "entity_id": { "type": "string", "format": "uuid" },
+        "entity_type": { "type": "string" },
+        "name": { "type": ["string", "null"] },
+        "temperature_K": { "type": "number" },
+        "temperature_rise_K": { "type": "number" },
+        "limit_K": { "type": "number", "description": "Maximum allowed temperature rise [K]." },
+        "excess_K": { "type": "number", "description": "Amount by which limit is exceeded [K]." },
+        "severity": {
+          "type": "string",
+          "enum": ["CRITICAL", "WARNING", "OK"],
+          "description": "CRITICAL = exceeded limit; WARNING = within 5 K of limit; OK = compliant."
+        }
+      }
+    },
+
+    "DeratingRecommendation": {
+      "type": "object",
+      "required": [
+        "entity_id",
+        "entity_type",
+        "current_loading_factor",
+        "recommended_loading_factor",
+        "margin_K",
+        "action_required"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "entity_id": { "type": "string", "format": "uuid" },
+        "entity_type": { "type": "string" },
+        "name": { "type": ["string", "null"] },
+        "current_loading_factor": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Current load current / rated current."
+        },
+        "recommended_loading_factor": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Maximum loading factor that keeps temperature within limits."
+        },
+        "margin_K": {
+          "type": "number",
+          "description": "Temperature margin to limit [K]. Negative = exceeded."
+        },
+        "action_required": {
+          "type": "boolean",
+          "description": "True if recommended_loading_factor < current_loading_factor."
+        }
+      }
+    },
+
+    "ComplianceCheck": {
+      "type": "object",
+      "required": [
+        "check_id",
+        "entity_id",
+        "entity_type",
+        "standard",
+        "clause",
+        "limit_K",
+        "actual_rise_K",
+        "margin_K",
+        "status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "check_id": {
+          "type": "string",
+          "description": "Unique identifier e.g. 'TEMP_RISE_BUSBAR_IEC61439'."
+        },
+        "entity_id": { "type": "string", "format": "uuid" },
+        "entity_type": { "type": "string" },
+        "name": { "type": ["string", "null"] },
+        "standard": {
+          "type": "string",
+          "description": "Standard being checked against, e.g. 'IEC_61439_2'."
+        },
+        "clause": {
+          "type": "string",
+          "description": "Standard clause reference, e.g. 'Table 4'."
+        },
+        "limit_K": {
+          "type": "number",
+          "description": "Temperature-rise limit per standard [K]."
+        },
+        "actual_rise_K": {
+          "type": "number",
+          "description": "Calculated temperature rise [K]."
+        },
+        "margin_K": {
+          "type": "number",
+          "description": "limit_K - actual_rise_K. Positive = compliant."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PASS", "FAIL", "NOT_APPLICABLE"],
+          "description": "INFORMATIVE status removed: arc-flash removed from MVP scope (DR-008)."
+        },
+        "note": {
+          "type": ["string", "null"],
+          "description": "Optional clarification for INFORMATIVE or NOT_APPLICABLE."
+        }
+      }
+    }
+  }
+}

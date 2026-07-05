@@ -49,7 +49,7 @@ Domains:
 | ID | Requirement |
 |----|------------|
 | FR-PROJ-001 | The system shall allow a user to create, name, save, open, and delete thermal analysis projects. |
-| FR-PROJ-002 | Each project shall store: project name, customer, assembly designation, standard edition, system voltage, frequency, ambient conditions, altitude, indoor/outdoor classification, IP rating, maximum and minimum ambient temperature, reference temperature, and free-text notes. |
+| FR-PROJ-002 | Each project shall store: project name, customer, assembly designation, standard profile (one or more of IEC 61439, UL 891, UL 1558, ANSI/IEEE C37.20.1, or other), system voltage, frequency, service conditions (ambient temperature maximum and 24-hour average, relative humidity, altitude, pollution degree), indoor/outdoor classification, IP rating, reference temperature, and free-text notes. |
 | FR-PROJ-003 | The system shall support multiple independent enclosures within a single project. |
 | FR-PROJ-004 | The system shall maintain a full revision history of every project state. |
 | FR-PROJ-005 | The system shall prevent accidental loss of unsaved work with an auto-save mechanism and explicit save/discard controls. |
@@ -107,6 +107,9 @@ Domains:
 | FR-ELEC-006 | The system shall accept measured loss values. |
 | FR-ELEC-007 | The system shall clearly distinguish between data labelled: CALCULATED, MANUFACTURER, MEASURED, and ASSUMED. |
 | FR-ELEC-008 | The system shall apply a low-confidence flag and sensitivity flag when ASSUMED data are used for any significant heat source. |
+| FR-ELEC-009 | The system shall model busbar joint and terminal losses using an explicit joint entity with temperature-dependent contact resistance, assembly torque metadata, and a health-state modifier (NOMINAL, DEGRADED, UNKNOWN). |
+| FR-ELEC-010 | The system shall model cable losses using cable length, conductor cross-section, material, insulation type, and bundle correction factor as independent inputs, not as a percentage of total losses. |
+| FR-ELEC-011 | The system shall model control transformer losses as separate no-load (core) and load-dependent (copper) components. |
 
 ### 3.6 Mesh and Nodal-Grid Definition
 
@@ -208,6 +211,34 @@ Domains:
 | FR-MAT-003 | The system shall allow an administrator to import licensed manufacturer data via a defined template format. |
 | FR-MAT-004 | The system shall prohibit the use of invented manufacturer data. Missing data must either halt the calculation with an explicit request, use an ASSUMED value with a low-confidence flag, or be entered by the user. |
 
+### 3.16 Standards Compliance — North American
+
+| ID | Requirement |
+|----|------------|
+| FR-STD-013 | The system shall allow the engineer to select a standards profile (IEC, North American UL/ANSI, or both) per project. |
+| FR-STD-014 | When the North American profile is selected, the system shall apply UL 891 / UL 1558 / ANSI/IEEE C37.20.1 temperature limits for compliance assessment while using the same thermal solver output. |
+| FR-STD-015 | The compliance assessment layer shall be decoupled from the thermal solver so that the same temperature field can be assessed against different standard families without re-running the solver. |
+
+### 3.17 Arc-Flash Safety Module
+
+| ID | Requirement |
+|----|------------|
+| FR-ARC-001 | The system shall implement an arc-flash hazard screening module using the IEEE 1584-2018 parametric method. |
+| FR-ARC-002 | The arc-flash module shall accept: bolted fault current, fault clearing time, electrode configuration (VCB, VCBB, HCB, VOA, HOA), enclosure size, and working distance. |
+| FR-ARC-003 | The arc-flash module shall output: arcing current (kA), incident energy (cal/cm²), arc-flash protection boundary (m), and required PPE category per NFPA 70E. |
+| FR-ARC-004 | All arc-flash results shall be labelled INFORMATIVE and shall carry a disclaimer requiring qualified engineer review before use in safety labels or work procedures. |
+| FR-ARC-005 | The arc-flash module shall provide a separate adiabatic conductor-heating check: I²t_limit for the conductor versus applied I²t, with PASS / FAIL output. |
+| FR-ARC-006 | The arc-flash module shall reference IEC TR 61641 for internal-arc enclosure considerations when the IEC standards profile is active. |
+
+### 3.18 Service Conditions
+
+| ID | Requirement |
+|----|------------|
+| FR-SVC-001 | The system shall store service conditions per project: maximum ambient temperature, 24-hour average ambient temperature, relative humidity, altitude, and pollution degree. |
+| FR-SVC-002 | The system shall apply the 24-hour average ambient temperature as the reference for IEC 61439 temperature-rise limits (maximum ambient + 5 K average rule). |
+| FR-SVC-003 | The system shall warn the engineer when service conditions exceed IEC 61439-1 Table 1 limits (40 °C max, 35 °C 24 h average, 2000 m altitude). |
+| FR-SVC-004 | Altitude correction factors shall be applied to convection coefficients when the project altitude exceeds 2000 m. |
+
 ---
 
 ## 4. Non-Functional Requirements
@@ -217,6 +248,8 @@ Domains:
 | NFR-PERF-001 | A steady-state nodal thermal solve for an enclosure with up to 500 thermal cells shall complete within 30 seconds on reference hardware. |
 | NFR-PERF-002 | The 2D drawing editor shall maintain ≥ 30 fps with up to 200 placed objects. |
 | NFR-PERF-003 | Long calculations shall run asynchronously with live progress feedback. |
+| NFR-PERF-004 | Reduced-order model (ROM) evaluations for parameter sweeps and uncertainty quantification shall complete in sub-second to a few seconds per sample. |
+| NFR-PERF-005 | The arc-flash screening module shall return results within 5 seconds for a single calculation. |
 | NFR-ACC-001 | Temperature results shall carry an explicit accuracy statement based on validation status, data confidence, and model limitations. |
 | NFR-ACC-002 | The system shall not claim absolute accuracy without supporting test-data comparison. |
 | NFR-AUD-001 | All calculation results shall be reproducible bit-for-bit from the saved input snapshot. |
@@ -244,6 +277,9 @@ Domains:
 | CR-ENG-006 | The CFD Export/Import adapter (MODE 4) shall be clearly labelled as an adapter to an external solver; the reduced-order solver shall never be described as CFD. |
 | CR-TECH-001 | The numerical engine shall accept a versioned JSON calculation input and return a versioned JSON result. |
 | CR-TECH-002 | The numerical engine shall have no direct dependency on FastAPI or the database. |
+| CR-ENG-007 | Arc-flash results shall always carry an INFORMATIVE label and a disclaimer. The software shall never present IEEE 1584-2018 screening results as a substitute for a formal arc-flash hazard analysis. |
+| CR-ENG-008 | Joint losses shall never be subsumed into homogeneous busbar resistivity. Each joint entity shall maintain its own contact resistance and health state. |
+| CR-ENG-009 | Compliance interpretation (PASS/FAIL against temperature limits) shall be standard-profile-aware. The same temperature value may produce different compliance outcomes under IEC 61439 versus UL/ANSI profiles. |
 
 ---
 
