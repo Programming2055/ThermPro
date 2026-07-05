@@ -8,8 +8,6 @@ from __future__ import annotations
 import uuid
 from unittest.mock import MagicMock
 
-import pytest
-
 from thermpro_api.models.geometry import (
     BusbarPlacement,
     Compartment,
