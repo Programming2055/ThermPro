@@ -9,17 +9,14 @@ the default test run. Run with: pytest tests/integration/ -m integration
 """
 from __future__ import annotations
 
-import asyncio
 import os
 
-import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from thermpro_api.database import Base
 from thermpro_api.main import app
-
 
 TEST_DB_URL = os.getenv(
     "THERMPRO_TEST_DATABASE_URL",

@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from thermpro_api.models.library_release import LibraryRelease, LibraryReleaseFile
+from thermpro_api.models.library_release import LibraryRelease
 from thermpro_api.services.hashing import sha256_hex
 
 
@@ -44,7 +44,9 @@ class LibraryService:
         Returns:
             Persisted LibraryRelease in DRAFT status.
         """
-        content_hash = sha256_hex({"library_name": library_name, "version": version, "entries": entries})
+        content_hash = sha256_hex(
+            {"library_name": library_name, "version": version, "entries": entries}
+        )
         release = LibraryRelease(
             library_name=library_name,
             version=version,
@@ -104,7 +106,7 @@ class LibraryService:
             )
         release.status = "APPROVED"
         release.approved_by_id = approver_id
-        release.approved_at = datetime.now(timezone.utc).isoformat()
+        release.approved_at = datetime.now(UTC).isoformat()
         await self._db.flush()
         return release
 

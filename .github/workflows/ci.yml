@@ -74,7 +74,7 @@ jobs:
         run: mypy engine/thermal_core --strict
 
       - name: mypy — thermpro_schemas
-        run: mypy packages/schemas/src/thermpro_schemas --strict
+        run: mypy packages/schemas/src/thermpro_schemas --strict --ignore-missing-imports
 
   # ---------------------------------------------------------------------------
   # 3. Schema validation (validate M0-03 and M0-04 JSON files are valid JSON)

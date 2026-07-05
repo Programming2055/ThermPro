@@ -1,5 +1,4 @@
 """Tests for domain type enums -- verify fan states, joint conditions, K_AC sources."""
-import pytest
 from thermal_core.domain_types import (
     FanOperatingState,
     JointCondition,

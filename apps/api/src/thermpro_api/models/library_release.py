@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 
 from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from thermpro_api.database import Base
@@ -51,7 +51,7 @@ class LibraryRelease(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         comment="ISO-8601 UTC timestamp of approval",
     )
 
-    files: Mapped[list["LibraryReleaseFile"]] = relationship(
+    files: Mapped[list[LibraryReleaseFile]] = relationship(
         "LibraryReleaseFile",
         back_populates="release",
         cascade="all, delete-orphan",
@@ -75,8 +75,10 @@ class LibraryReleaseFile(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     s3_key: Mapped[str] = mapped_column(String(1024), nullable=False)
-    content_type: Mapped[str] = mapped_column(String(128), nullable=False, default="application/json")
+    content_type: Mapped[str] = mapped_column(
+        String(128), nullable=False, default="application/json"
+    )
     size_bytes: Mapped[int] = mapped_column(nullable=False)
     file_hash_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
 
-    release: Mapped["LibraryRelease"] = relationship("LibraryRelease", back_populates="files")
+    release: Mapped[LibraryRelease] = relationship("LibraryRelease", back_populates="files")

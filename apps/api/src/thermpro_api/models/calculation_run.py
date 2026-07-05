@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -9,6 +10,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from thermpro_api.database import Base
 from thermpro_api.models.base import TimestampMixin, UUIDPrimaryKeyMixin
+
+if TYPE_CHECKING:
+    from thermpro_api.models.artifact import CalculationArtifact
+    from thermpro_api.models.project import Project
 
 
 class CalculationRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -64,7 +69,8 @@ class CalculationRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # Status
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="DRAFT", index=True,
-        comment="DRAFT | VALIDATING | REJECTED | PENDING | RUNNING | COMPLETED | FAILED | CANCELLED | ENGINE_NOT_IMPLEMENTED",
+        comment="DRAFT | VALIDATING | REJECTED | PENDING | RUNNING | COMPLETED | FAILED | CANCELLED"
+        " | ENGINE_NOT_IMPLEMENTED",
     )
     rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -81,10 +87,10 @@ class CalculationRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     result_checksum_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # Relations
-    project: Mapped["Project"] = relationship(  # type: ignore[name-defined]
+    project: Mapped[Project] = relationship(
         "Project", back_populates="calculation_runs"
     )
-    artifacts: Mapped[list["CalculationArtifact"]] = relationship(  # type: ignore[name-defined]
+    artifacts: Mapped[list[CalculationArtifact]] = relationship(
         "CalculationArtifact",
         back_populates="calculation_run",
         cascade="all, delete-orphan",

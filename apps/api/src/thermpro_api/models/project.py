@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
@@ -9,6 +10,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from thermpro_api.database import Base
 from thermpro_api.models.base import TimestampMixin, UUIDPrimaryKeyMixin
+
+if TYPE_CHECKING:
+    from thermpro_api.models.calculation_run import CalculationRun
 
 
 class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -26,7 +30,7 @@ class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     is_archived: Mapped[bool] = mapped_column(nullable=False, default=False)
 
-    calculation_runs: Mapped[list["CalculationRun"]] = relationship(  # type: ignore[name-defined]
+    calculation_runs: Mapped[list[CalculationRun]] = relationship(
         "CalculationRun",
         back_populates="project",
         cascade="all, delete-orphan",

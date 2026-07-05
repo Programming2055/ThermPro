@@ -7,9 +7,7 @@ Required properties:
 3. Unit sensitivity: changing numeric scale (e.g. Ohm vs uOhm) changes hash.
 4. Library manifest sensitivity: any pin change changes the hash.
 """
-import pytest
 from thermpro_api.services.hashing import canonical_json_bytes, sha256_hex
-
 
 # ---------------------------------------------------------------------------
 # 1. Key-order independence

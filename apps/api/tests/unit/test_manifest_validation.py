@@ -11,6 +11,7 @@ from thermpro_api.services.manifest import ManifestService
 
 def _make_manifest(manifest_id: uuid.UUID):
     from unittest.mock import MagicMock
+
     from thermpro_api.models.dataset_manifest import DatasetManifest
     m = MagicMock(spec=DatasetManifest)
     m.id = manifest_id
@@ -21,7 +22,9 @@ def _make_manifest(manifest_id: uuid.UUID):
     return m
 
 
-def _make_entry(manifest_id: uuid.UUID, library_name: str, version: str, hash_val: str) -> DatasetManifestEntry:
+def _make_entry(
+    manifest_id: uuid.UUID, library_name: str, version: str, hash_val: str
+) -> DatasetManifestEntry:
     from unittest.mock import MagicMock
     e = MagicMock(spec=DatasetManifestEntry)
     e.id = uuid.uuid4()
@@ -33,7 +36,9 @@ def _make_entry(manifest_id: uuid.UUID, library_name: str, version: str, hash_va
     return e
 
 
-def _make_release(library_name: str, version: str, hash_val: str, status: str = "APPROVED") -> LibraryRelease:
+def _make_release(
+    library_name: str, version: str, hash_val: str, status: str = "APPROVED"
+) -> LibraryRelease:
     from unittest.mock import MagicMock
     r = MagicMock(spec=LibraryRelease)
     r.id = uuid.uuid4()

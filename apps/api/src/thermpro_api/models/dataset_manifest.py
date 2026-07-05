@@ -34,7 +34,7 @@ class DatasetManifest(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     validated_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
-    entries: Mapped[list["DatasetManifestEntry"]] = relationship(
+    entries: Mapped[list[DatasetManifestEntry]] = relationship(
         "DatasetManifestEntry",
         back_populates="manifest",
         cascade="all, delete-orphan",
@@ -65,6 +65,6 @@ class DatasetManifestEntry(UUIDPrimaryKeyMixin, Base):
         nullable=True,
     )
 
-    manifest: Mapped["DatasetManifest"] = relationship(
+    manifest: Mapped[DatasetManifest] = relationship(
         "DatasetManifest", back_populates="entries"
     )

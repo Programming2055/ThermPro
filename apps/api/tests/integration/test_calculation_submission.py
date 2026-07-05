@@ -1,7 +1,6 @@
 """Integration tests for the full calculation submission flow."""
 import pytest
 
-
 _VALID_INPUT = {
     "schema_version": "1.0",
     "mode": "MODE_1",

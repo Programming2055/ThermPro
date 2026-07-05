@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -9,6 +10,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from thermpro_api.database import Base
 from thermpro_api.models.base import TimestampMixin, UUIDPrimaryKeyMixin
+
+if TYPE_CHECKING:
+    from thermpro_api.models.calculation_run import CalculationRun
 
 
 class CalculationArtifact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -39,6 +43,6 @@ class CalculationArtifact(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     size_bytes: Mapped[int] = mapped_column(nullable=False)
     file_hash_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
 
-    calculation_run: Mapped["CalculationRun"] = relationship(  # type: ignore[name-defined]
+    calculation_run: Mapped[CalculationRun] = relationship(
         "CalculationRun", back_populates="artifacts"
     )

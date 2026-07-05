@@ -2,18 +2,18 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from thermpro_schemas import SchemaValidationError, validate_input_snapshot
 
 from thermpro_api.models.calculation_run import CalculationRun
 from thermpro_api.models.library_release import LibraryRelease
 from thermpro_api.services.audit import AuditService
 from thermpro_api.services.auth import UserContext
 from thermpro_api.services.hashing import sha256_hex
-from thermpro_schemas import SchemaValidationError, validate_input_snapshot
 
 
 class CalculationSubmissionError(ValueError):
@@ -84,7 +84,7 @@ class CalculationService:
         checksum = sha256_hex(input_snapshot)
 
         # Step 5: persist immutable run
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = datetime.now(UTC).isoformat()
         run = CalculationRun(
             project_id=project_id,
             submitted_by_id=actor.user_id,
@@ -159,7 +159,8 @@ class CalculationService:
 
             if not library_name or not version or not expected_hash:
                 errors.append(
-                    f"{library_key}: pin missing required fields (name, version, content_hash_sha256)."
+                    f"{library_key}: pin missing required fields"
+                    " (name, version, content_hash_sha256)."
                 )
                 continue
 

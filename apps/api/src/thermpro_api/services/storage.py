@@ -77,10 +77,9 @@ class MinIOStorage(ObjectStorage):
         return response["Body"].read()  # type: ignore[no-any-return]
 
     def delete_object(self, key: str) -> None:
-        try:
+        import contextlib
+        with contextlib.suppress(botocore.exceptions.ClientError):
             self._client.delete_object(Bucket=self._bucket, Key=key)
-        except botocore.exceptions.ClientError:
-            pass  # no-op if key does not exist
 
     def get_presigned_url(self, key: str, expires_in_seconds: int = 3600) -> str:
         return self._client.generate_presigned_url(  # type: ignore[no-any-return]

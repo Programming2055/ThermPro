@@ -2,7 +2,6 @@
 import pytest
 from thermpro_schemas import SchemaValidationError, validate_input_snapshot
 
-
 _BASE_INPUT = {
     "schema_version": "1.0",
     "mode": "MODE_1",

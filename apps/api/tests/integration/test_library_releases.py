@@ -1,7 +1,6 @@
 """Integration tests for library release lifecycle."""
 import pytest
 
-
 _ENTRIES = [{"id": "mat-001", "name": "Copper", "resistivity_ohm_m": 1.72e-8}]
 
 
