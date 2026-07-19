@@ -1,13 +1,12 @@
 """
-thermpro_engine -- Numerical thermal engine placeholder.
+thermpro_engine -- Numerical thermal engine.
 
-Milestone 1: Domain types and interfaces only.
-No thermal physics has been implemented.
-All calculation submissions return ENGINE_NOT_IMPLEMENTED.
-
-Milestone 2: Geometry domain types added (geometry.py).
+Milestone 1: Domain types and interfaces.
+Milestone 2: Geometry domain types (geometry.py).
+Milestone 3: Engineering libraries and heat source model (libraries.py,
+             heat_source.py, loss_models.py).
 """
-__version__ = "0.1.0"
+__version__ = "0.3.0"
 
 from thermal_core.geometry import (
     COORDINATE_SYSTEM_VERSION,
@@ -23,6 +22,37 @@ from thermal_core.geometry import (
     Point3D,
     SurfaceFace,
     ValidationSeverity,
+)
+from thermal_core.heat_source import (
+    HeatSource,
+    HeatSourceEntityType,
+    HeatSourceMap,
+    LossBreakdown,
+    LossCalculationSource,
+)
+from thermal_core.libraries import (
+    BusbarCoating,
+    BusbarProfile,
+    BusbarProfileLibraryEntry,
+    CableConductor,
+    CableInsulation,
+    CableLibraryEntry,
+    ConnectionLibraryEntry,
+    ContactQuality,
+    DeviceLibraryEntry,
+    FanCurvePoint,
+    FanDirection,
+    FanLibraryEntry,
+    FilterLibraryEntry,
+    LossConfidence,
+    LossCurvePoint,
+    MaterialCategory,
+    MaterialLibraryEntry,
+    MountingType,
+    OpeningAccessory,
+    SurfaceLibraryEntry,
+    VentilationOpeningLibraryEntry,
+    VentilationRequirement,
 )
 
 __all__ = [
@@ -42,4 +72,34 @@ __all__ = [
     "InternalOpeningDirection",
     "ValidationSeverity",
     "InstallationType",
+    # heat source
+    "HeatSource",
+    "HeatSourceEntityType",
+    "HeatSourceMap",
+    "LossBreakdown",
+    "LossCalculationSource",
+    # library types
+    "LossConfidence",
+    "LossCurvePoint",
+    "FanCurvePoint",
+    "MaterialCategory",
+    "BusbarProfile",
+    "BusbarCoating",
+    "MountingType",
+    "VentilationRequirement",
+    "ContactQuality",
+    "FanDirection",
+    "OpeningAccessory",
+    "CableConductor",
+    "CableInsulation",
+    # library entries
+    "MaterialLibraryEntry",
+    "SurfaceLibraryEntry",
+    "BusbarProfileLibraryEntry",
+    "DeviceLibraryEntry",
+    "FanLibraryEntry",
+    "FilterLibraryEntry",
+    "VentilationOpeningLibraryEntry",
+    "CableLibraryEntry",
+    "ConnectionLibraryEntry",
 ]
