@@ -15,6 +15,17 @@ from thermpro_api.models.geometry import (
     Partition,
     Surface,
 )
+from thermpro_api.models.library import (
+    BusbarProfileLibraryEntry,
+    CableLibraryEntry,
+    ConnectionLibraryEntry,
+    DeviceLibraryEntry,
+    FanLibraryEntry,
+    FilterLibraryEntry,
+    MaterialLibraryEntry,
+    SurfaceLibraryEntry,
+    VentilationOpeningLibraryEntry,
+)
 from thermpro_api.models.library_release import LibraryRelease, LibraryReleaseFile
 from thermpro_api.models.project import Project
 from thermpro_api.models.user import User
@@ -40,4 +51,14 @@ __all__ = [
     "DevicePlacement",
     "BusbarPlacement",
     "GeometryValidationIssue",
+    # M3 library entries
+    "MaterialLibraryEntry",
+    "SurfaceLibraryEntry",
+    "BusbarProfileLibraryEntry",
+    "DeviceLibraryEntry",
+    "FanLibraryEntry",
+    "FilterLibraryEntry",
+    "VentilationOpeningLibraryEntry",
+    "CableLibraryEntry",
+    "ConnectionLibraryEntry",
 ]
