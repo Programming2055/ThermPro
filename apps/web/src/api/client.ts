@@ -16,6 +16,16 @@ import type {
   PaginatedResponse,
   HealthResponse,
   ReadinessResponse,
+  Assembly,
+  CreateAssemblyRequest,
+  Enclosure,
+  CreateEnclosureRequest,
+  Compartment,
+  CreateCompartmentRequest,
+  Partition,
+  DevicePlacement,
+  BusbarPlacement,
+  ValidationResponse,
 } from "@/types/api";
 
 const BASE_URL = "/api/v1";
@@ -140,6 +150,68 @@ export const artifactsApi = {
     }).then((r) => r.json() as Promise<CalculationArtifact>),
 
   get: (id: string) => get<CalculationArtifact>(`/artifacts/${id}`),
+};
+
+// ─── Assemblies ───────────────────────────────────────────────────────────────
+
+export const assembliesApi = {
+  list: (projectId: string) =>
+    get<Assembly[]>(`/projects/${projectId}/assemblies`),
+
+  create: (projectId: string, data: CreateAssemblyRequest) =>
+    post<Assembly>(`/projects/${projectId}/assemblies`, data),
+};
+
+// ─── Enclosures ───────────────────────────────────────────────────────────────
+
+export const enclosuresApi = {
+  list: (projectId: string) =>
+    get<Enclosure[]>(`/projects/${projectId}/enclosures`),
+
+  get: (enclosureId: string) => get<Enclosure>(`/enclosures/${enclosureId}`),
+
+  create: (projectId: string, data: CreateEnclosureRequest) =>
+    post<Enclosure>(`/projects/${projectId}/enclosures`, data),
+
+  delete: (enclosureId: string) =>
+    request<void>("DELETE", `/enclosures/${enclosureId}`),
+
+  validate: (enclosureId: string) =>
+    post<ValidationResponse>(`/enclosures/${enclosureId}/validate`, {}),
+};
+
+// ─── Compartments ─────────────────────────────────────────────────────────────
+
+export const compartmentsApi = {
+  list: (enclosureId: string) =>
+    get<Compartment[]>(`/enclosures/${enclosureId}/compartments`),
+
+  create: (enclosureId: string, data: CreateCompartmentRequest) =>
+    post<Compartment>(`/enclosures/${enclosureId}/compartments`, data),
+
+  delete: (compartmentId: string) =>
+    request<void>("DELETE", `/compartments/${compartmentId}`),
+};
+
+// ─── Partitions ───────────────────────────────────────────────────────────────
+
+export const partitionsApi = {
+  list: (enclosureId: string) =>
+    get<Partition[]>(`/enclosures/${enclosureId}/partitions`),
+};
+
+// ─── Device placements ────────────────────────────────────────────────────────
+
+export const devicePlacementsApi = {
+  list: (enclosureId: string) =>
+    get<DevicePlacement[]>(`/enclosures/${enclosureId}/device-placements`),
+};
+
+// ─── Busbar placements ────────────────────────────────────────────────────────
+
+export const busbarPlacementsApi = {
+  list: (enclosureId: string) =>
+    get<BusbarPlacement[]>(`/enclosures/${enclosureId}/busbar-placements`),
 };
 
 export { ApiClientError };

@@ -186,6 +186,181 @@ export interface CalculationArtifact {
   created_at: string;
 }
 
+// ─── Geometry — M2 ───────────────────────────────────────────────────────────
+
+export type SurfaceFace = "FRONT" | "REAR" | "LEFT" | "RIGHT" | "TOP" | "BOTTOM";
+
+export type CompartmentType =
+  | "DEVICE_CHAMBER"
+  | "BUSBAR_CHAMBER"
+  | "CABLE_CHAMBER"
+  | "AUXILIARY_CHAMBER"
+  | "VENTILATION_CHAMBER"
+  | "CUSTOM";
+
+export type PartitionOrientation = "VERTICAL_XZ" | "VERTICAL_YZ" | "HORIZONTAL_XY";
+
+export type OpeningDirection = "INLET" | "OUTLET" | "BIDIRECTIONAL" | "UNKNOWN";
+
+export type InstallationType =
+  | "FLOOR_STANDING"
+  | "WALL_MOUNTED"
+  | "RACK_MOUNTED"
+  | "FREESTANDING";
+
+export type ValidationSeverity = "INFO" | "WARNING" | "ERROR" | "BLOCKER";
+
+export interface Assembly {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string | null;
+  coordinate_system_version: string;
+  revision: number;
+  created_at: string | null;
+}
+
+export interface CreateAssemblyRequest {
+  name: string;
+  description?: string;
+}
+
+export interface Enclosure {
+  id: string;
+  project_id: string;
+  assembly_id: string | null;
+  name: string;
+  external_width_m: number;
+  external_height_m: number;
+  external_depth_m: number;
+  internal_width_m: number;
+  internal_height_m: number;
+  internal_depth_m: number;
+  wall_thickness_m: number;
+  material_ref: string | null;
+  installation_type: InstallationType;
+  ip_rating: string | null;
+  coordinate_system_version: string;
+  revision: number;
+  created_at: string | null;
+}
+
+export interface CreateEnclosureRequest {
+  name: string;
+  assembly_id?: string;
+  external_width_m: number;
+  external_height_m: number;
+  external_depth_m: number;
+  internal_width_m: number;
+  internal_height_m: number;
+  internal_depth_m: number;
+  wall_thickness_m?: number;
+  material_ref?: string;
+  installation_type?: InstallationType;
+  ip_rating?: string;
+}
+
+export interface Compartment {
+  id: string;
+  enclosure_id: string;
+  parent_compartment_id: string | null;
+  name: string;
+  compartment_type: CompartmentType;
+  position_x_m: number;
+  position_y_m: number;
+  position_z_m: number;
+  width_m: number;
+  height_m: number;
+  depth_m: number;
+  revision: number;
+}
+
+export interface CreateCompartmentRequest {
+  name: string;
+  compartment_type?: CompartmentType;
+  parent_compartment_id?: string;
+  position_x_m?: number;
+  position_y_m?: number;
+  position_z_m?: number;
+  width_m: number;
+  height_m: number;
+  depth_m: number;
+}
+
+export interface Partition {
+  id: string;
+  enclosure_id: string;
+  name: string | null;
+  orientation: PartitionOrientation;
+  position_x_m: number;
+  position_y_m: number;
+  position_z_m: number;
+  width_m: number;
+  height_m: number;
+  thickness_m: number;
+  material_ref: string | null;
+  is_removable: boolean;
+  revision: number;
+}
+
+export interface DevicePlacement {
+  id: string;
+  enclosure_id: string;
+  compartment_id: string | null;
+  name: string;
+  device_library_ref: string | null;
+  position_x_m: number;
+  position_y_m: number;
+  position_z_m: number;
+  width_m: number;
+  height_m: number;
+  depth_m: number;
+  rotation_deg: number;
+  mounting_surface: string | null;
+  clearance_x_m: number;
+  clearance_y_m: number;
+  clearance_z_m: number;
+}
+
+export interface BusbarPlacement {
+  id: string;
+  enclosure_id: string;
+  compartment_id: string | null;
+  name: string;
+  busbar_library_ref: string | null;
+  position_x_m: number;
+  position_y_m: number;
+  position_z_m: number;
+  width_m: number;
+  thickness_m: number;
+  length_m: number;
+  phase_designation: string | null;
+  clearance_m: number;
+}
+
+export interface ValidationIssue {
+  id: string;
+  enclosure_id: string;
+  issue_id: string;
+  severity: ValidationSeverity;
+  entity_type: string;
+  entity_id: string;
+  message: string;
+  coordinate_ref: Record<string, number> | null;
+  suggested_fix: string | null;
+  rule_id: string;
+  is_resolved: boolean;
+}
+
+export interface ValidationResponse {
+  enclosure_id: string;
+  issue_count: number;
+  error_count: number;
+  warning_count: number;
+  blocker_count: number;
+  issues: ValidationIssue[];
+}
+
 // ─── Health ──────────────────────────────────────────────────────────────────
 
 export interface HealthResponse {
