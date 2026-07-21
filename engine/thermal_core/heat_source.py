@@ -22,6 +22,14 @@ from thermal_core.geometry import Point3D
 # ---------------------------------------------------------------------------
 
 
+class HeatSourceGenerationType(str, Enum):
+    """How heat is spatially distributed within the source volume."""
+
+    VOLUMETRIC = "VOLUMETRIC"   # distributed uniformly over volume_m3 [W/m³]
+    SURFACE = "SURFACE"         # distributed over surface_area_m2 [W/m²]
+    POINT = "POINT"             # concentrated at a single location point
+
+
 class HeatSourceEntityType(str, Enum):
     """The category of engineering object that generates heat."""
 
@@ -134,6 +142,8 @@ class HeatSource:
     operating_current_a: Optional[float]
     current_fraction: Optional[float]
     breakdown: Optional[LossBreakdown] = None
+    generation_type: HeatSourceGenerationType = HeatSourceGenerationType.POINT
+    uncertainty_percent: Optional[float] = None
 
     def __post_init__(self) -> None:
         if self.power_loss_w < 0:
@@ -151,6 +161,10 @@ class HeatSource:
         if self.operating_current_a is not None and self.operating_current_a < 0:
             raise ValueError(
                 f"HeatSource.operating_current_a must be >= 0 (A); got {self.operating_current_a}"
+            )
+        if self.uncertainty_percent is not None and not (0.0 <= self.uncertainty_percent <= 100.0):
+            raise ValueError(
+                f"HeatSource.uncertainty_percent must be in [0, 100]; got {self.uncertainty_percent}"
             )
 
     # ------------------------------------------------------------------
