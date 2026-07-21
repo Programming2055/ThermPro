@@ -11,6 +11,7 @@ from thermpro_api.routers import (
     dataset_manifests,
     geometry,
     health,
+    library_entries,
     library_releases,
     projects,
 )
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
     app.include_router(calculation_runs.router, prefix=api_v1_prefix)
     app.include_router(artifacts.router, prefix=api_v1_prefix)
     app.include_router(geometry.router, prefix=api_v1_prefix)
+    app.include_router(library_entries.router, prefix=api_v1_prefix)
 
     @app.on_event("startup")
     async def on_startup() -> None:
