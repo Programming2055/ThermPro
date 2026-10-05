@@ -779,3 +779,19 @@ def test_no_nan_or_infinity_reaches_the_result() -> None:
             assert math.isfinite(node)
 
     walk(result)
+
+
+def test_a_blocked_mode_still_reports_its_mapping_warnings() -> None:
+    """
+    The warnings often say what to fix before trying again.
+
+    A MODE_1 run refused for forced ventilation still has something to tell
+    the engineer about the model it refused.
+    """
+    document = m003_document("MODE_1", with_fan=True)
+    del document["enclosure"]["compartments"][0]["partitions"]
+    result = solve_json(document, iec60890_coefficients=LICENSED_COEFFICIENTS)
+    assert result["status"] == "FAILED"
+    check_ids = {c["check_id"] for c in result["compliance"]["checks"]}
+    assert "MODE_NOT_APPLICABLE" in check_ids
+    assert "WARN-NO-PARTITION" in check_ids

@@ -265,3 +265,27 @@ class TestIec60890Import:
         payload = {**COEFFICIENT_TEMPLATE["coefficients"], "c0": 1.8, "n": 0.8, "d": 0.9}
         with pytest.raises(Iec60890ImportError):
             coefficients_from_json(payload)
+
+
+class TestExecutionNeverStrandsARun:
+    async def test_an_unexpected_engine_error_fails_the_run(
+        self, service: CalculationService, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        A run left in RUNNING looks like work in progress and is waited on
+        forever. The engine is documented never to raise, so reaching this
+        path means a defect — which must still leave a legible status.
+        """
+        import thermpro_api.services.calculation as module
+
+        def _explode(*_: Any, **__: Any) -> dict[str, Any]:
+            raise RuntimeError("engine defect")
+
+        monkeypatch.setattr(module, "solve_json", _explode)
+        run = _run()
+        with pytest.raises(RuntimeError, match="engine defect"):
+            await service.execute(run, ACTOR)
+        assert run.status == "FAILED"
+        assert run.rejection_reason is not None
+        assert "RuntimeError" in run.rejection_reason
+        assert run.completed_at is not None

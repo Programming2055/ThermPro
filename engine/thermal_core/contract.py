@@ -2033,10 +2033,11 @@ def solve_json(
     )
 
     if mapped.blocking_reasons:
-        return _blocked_document(mapped)
-
-    result = ZonalSolver().solve(mapped.snapshot)
-    document = result_to_json(result, mapped)
+        document = _blocked_document(mapped)
+    else:
+        document = result_to_json(ZonalSolver().solve(mapped.snapshot), mapped)
+    # The warnings matter just as much when the mode was refused: they often
+    # say why, or what to fix before trying again.
     _append_mapping_warnings(document, mapped)
     return document
 

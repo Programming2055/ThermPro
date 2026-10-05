@@ -272,6 +272,19 @@ class CalculationService:
                 f"The InputSnapshot could not be mapped onto a solvable model: {exc}",
                 details=list(exc.errors),
             ) from exc
+        except Exception as exc:
+            # The engine is documented never to raise on a modelling or
+            # convergence failure, so reaching here means a defect. Record it
+            # and re-raise: a run left in RUNNING looks like work still in
+            # progress and would be waited on forever.
+            run.status = "FAILED"
+            run.rejection_reason = (
+                f"The engine raised an unexpected {type(exc).__name__}: {exc}"
+            )
+            run.completed_at = datetime.now(UTC).isoformat()
+            await self._db.flush()
+            logger.exception("thermpro_api.engine_crashed", run_id=str(run.id))
+            raise
 
         try:
             validate_result_snapshot(result)
