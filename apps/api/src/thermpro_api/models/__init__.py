@@ -15,6 +15,7 @@ from thermpro_api.models.geometry import (
     Partition,
     Surface,
 )
+from thermpro_api.models.iec60890_dataset import Iec60890Dataset
 from thermpro_api.models.library import (
     BusbarProfileLibraryEntry,
     CableLibraryEntry,
@@ -50,6 +51,7 @@ __all__ = [
     "FanLibraryEntry",
     "FilterLibraryEntry",
     "GeometryValidationIssue",
+    "Iec60890Dataset",
     "InternalOpening",
     "LibraryRelease",
     "LibraryReleaseFile",

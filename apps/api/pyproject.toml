@@ -8,6 +8,9 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
+    # The artifact upload endpoint takes multipart form data, which
+    # FastAPI refuses to route without this at import time.
+    "python-multipart>=0.0.9",
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.9.0",
     "pydantic-settings>=2.5.0",

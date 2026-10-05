@@ -28,7 +28,14 @@ class CalculationRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
                           -> PENDING -> RUNNING -> COMPLETED
                                                 -> FAILED
                                                 -> CANCELLED
-                          -> ENGINE_NOT_IMPLEMENTED (M1 only)
+
+    A run reaches COMPLETED whether the solver converged or not: CR-ENG-005
+    requires an unconverged result to be stored and shown with the RESULT
+    INVALID treatment, and `result_snapshot["status"]` carries that
+    distinction. FAILED means the solver could not produce a field at all.
+
+    ENGINE_NOT_IMPLEMENTED is retained in the enum for runs submitted before
+    the solver existed; nothing writes it now.
     """
 
     __tablename__ = "calculation_runs"

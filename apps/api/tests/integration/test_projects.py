@@ -33,7 +33,7 @@ async def test_list_projects(client):
 
     resp2 = await client.get("/api/v1/projects")
     assert resp2.status_code == 200
-    names = [p["name"] for p in resp2.json()]
+    names = [p["name"] for p in resp2.json()["items"]]
     assert "MCC-ListTest" in names
 
 

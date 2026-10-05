@@ -45,7 +45,9 @@ async def test_list_library_releases(client):
     )
     resp = await client.get("/api/v1/library-releases", params={"library_name": "DeviceLibrary"})
     assert resp.status_code == 200
-    assert any(r["library_name"] == "DeviceLibrary" for r in resp.json())
+    assert any(
+        r["library_name"] == "DeviceLibrary" for r in resp.json()["items"]
+    )
 
 
 @pytest.mark.integration
