@@ -12,6 +12,7 @@ import type {
   DatasetManifest,
   LibraryManifest,
   CalculationRun,
+  ResultSnapshot,
   CalculationArtifact,
   PaginatedResponse,
   HealthResponse,
@@ -130,15 +131,42 @@ export const datasetManifestsApi = {
 // ─── Calculation runs ────────────────────────────────────────────────────────
 
 export const calculationRunsApi = {
-  list: (page = 1, pageSize = 20) =>
+  list: (page = 1, pageSize = 20, projectId?: string) =>
     get<PaginatedResponse<CalculationRun>>(
-      `/calculation-runs?page=${page}&page_size=${pageSize}`
+      `/calculation-runs?page=${page}&page_size=${pageSize}` +
+        (projectId ? `&project_id=${projectId}` : "")
     ),
 
   get: (id: string) => get<CalculationRun>(`/calculation-runs/${id}`),
 
-  submit: (inputSnapshot: Record<string, unknown>) =>
-    post<CalculationRun>("/calculation-runs", inputSnapshot),
+  /**
+   * Submit an M0-03 InputSnapshot.
+   *
+   * `execute` solves in the same request. Convenient for the small models
+   * the UI submits; a long study should queue and be executed separately.
+   */
+  submit: (
+    projectId: string,
+    inputSnapshot: Record<string, unknown>,
+    execute = false
+  ) =>
+    post<CalculationRun>("/calculation-runs", {
+      project_id: projectId,
+      input_snapshot: inputSnapshot,
+      execute,
+    }),
+
+  execute: (id: string) =>
+    post<CalculationRun>(`/calculation-runs/${id}/execute`, {}),
+
+  /** The stored M0-04 document, verbatim. */
+  result: (id: string) => get<ResultSnapshot>(`/calculation-runs/${id}/result`),
+
+  /** The immutable M0-03 document the run was submitted with. */
+  input: (id: string) =>
+    get<Record<string, unknown>>(`/calculation-runs/${id}/input`),
+
+  cfdExportUrl: (id: string) => `${BASE_URL}/calculation-runs/${id}/cfd-export`,
 };
 
 // ─── Artifacts ───────────────────────────────────────────────────────────────

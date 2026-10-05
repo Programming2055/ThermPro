@@ -12,7 +12,10 @@ const STATUS_STYLES: Record<string, string> = {
   VALIDATING: "badge-info",
   PENDING: "badge-info",
   UNDER_REVIEW: "badge-info",
+  // Retained for runs submitted before the solver existed; nothing
+  // writes it now.
   ENGINE_NOT_IMPLEMENTED: "badge-warning",
+  NON_CONVERGED: "badge-error",
   DRAFT: "badge-neutral",
   FAILED: "badge-error",
   REJECTED: "badge-error",

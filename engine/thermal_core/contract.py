@@ -96,6 +96,15 @@ _BLOCKING_FAN_STATES = frozenset({"STOPPED_WITH_DAMPER", "FAILED_BLOCKED"})
 # which DR-005 requires be reported rather than clamped to zero.
 _DRIVING_FAN_STATES = frozenset({"RUNNING_FORWARD", "REVERSE_FLOW_ESTIMATED"})
 
+_FACE_LABELS = {
+    "FRONT": "Front panel",
+    "REAR": "Rear panel",
+    "LEFT": "Left side",
+    "RIGHT": "Right side",
+    "TOP": "Roof",
+    "BOTTOM": "Base",
+}
+
 _CONFIDENCE_BY_DATA_CONFIDENCE = {
     "HIGH": LossConfidence.MANUFACTURER_CERTIFIED,
     "MEDIUM": LossConfidence.MANUFACTURER_TYPICAL,
@@ -288,6 +297,8 @@ class ContractInput:
     entity_loading_factors: dict[str, float]
     #: compartment_id → centroid, for the M0-04 thermal cells.
     compartment_centres_m: dict[str, tuple[float, float, float]]
+    #: compartment_id → its name in the submitted document.
+    compartment_names: dict[str, str]
     #: Problems found while mapping that do not prevent a solve.
     warnings: tuple[tuple[str, str], ...] = ()
     #: Reasons the requested mode may not be used at all.
@@ -410,6 +421,7 @@ def input_snapshot_from_json(
         entity_limits_k=entity_limits_k,
         entity_loading_factors=loading_factors,
         compartment_centres_m=builder.compartment_centres,
+        compartment_names=dict(builder.compartment_names),
         warnings=tuple(warnings),
         blocking_reasons=blocking,
     )
@@ -497,6 +509,7 @@ class _GeometryBuilder:
         )
 
         self.boxes: dict[str, _Box] = {}
+        self.compartment_names: dict[str, str] = {}
         self.compartment_centres: dict[str, tuple[float, float, float]] = {}
         self.fan_entity_types: dict[str, str] = {}
         self._compartment_order: list[str] = []
@@ -607,6 +620,7 @@ class _GeometryBuilder:
             # approximation: there is nothing inside to divide it.
             box = self._interior_box()
             compartment_id = f"{self.enclosure_id}:interior"
+            self.compartment_names[compartment_id] = "Enclosure interior"
             self.boxes[compartment_id] = box
             self.compartment_centres[compartment_id] = box.centre
             self._compartment_order.append(compartment_id)
@@ -632,6 +646,9 @@ class _GeometryBuilder:
             depth = _req_float(item, "depth_m", "compartment")
             height = _req_float(item, "height_m", "compartment")
             box = _Box(x0, y0, z0, x0 + width, y0 + depth, z0 + height)
+            self.compartment_names[compartment_id] = (
+                _opt_str(item, "name") or compartment_id
+            )
             self.boxes[compartment_id] = box
             self.compartment_centres[compartment_id] = box.centre
             self._compartment_order.append(compartment_id)
@@ -741,6 +758,10 @@ class _GeometryBuilder:
                 surfaces.append(
                     SurfaceSnapshot(
                         surface_id=surface_id,
+                        name=(
+                            f"{_FACE_LABELS[face.name]} — "
+                            f"{self.compartment_names.get(compartment_id, compartment_id)}"
+                        ),
                         compartment_id=compartment_id,
                         area_m2=area,
                         orientation=face.orientation,
@@ -895,6 +916,11 @@ class _GeometryBuilder:
                     surfaces.append(
                         SurfaceSnapshot(
                             surface_id=f"partition:{partition_id}",
+                            name=(
+                                f"Partition between "
+                                f"{self.compartment_names.get(owner, owner)} and "
+                                f"{self.compartment_names.get(other, other)}"
+                            ),
                             compartment_id=owner,
                             area_m2=solid_area,
                             orientation=(
@@ -1239,6 +1265,11 @@ def _fan_discharge_coefficient(fan: Mapping[str, Any]) -> float:
     return min(1.0, 1.0 / math.sqrt(k))
 
 
+def _short(identifier: str) -> str:
+    """The leading octet of a uuid, enough to tell two joints apart."""
+    return identifier.split("-")[0]
+
+
 def _take_adjacency(
     by_axis: dict[str, list[_Adjacency]],
     axes: Sequence[str],
@@ -1477,7 +1508,7 @@ def _busbar_sources(
         out.extend(
             _joint_sources(
                 run,
-                run_id,
+                run_name or run_id,
                 current,
                 segment_centres,
                 builder,
@@ -1491,7 +1522,7 @@ def _busbar_sources(
 
 def _joint_sources(
     run: Mapping[str, Any],
-    run_id: str,
+    run_label: str,
     current_a: float,
     segment_centres: Mapping[str, tuple[float, float, float]],
     builder: _GeometryBuilder,
@@ -1559,7 +1590,7 @@ def _joint_sources(
                 operating_current_a=current_a,
                 current_fraction=None,
                 breakdown=LossBreakdown(contact_loss_w=power_w),
-                name=f"{run_id} joint {joint_id}",
+                name=f"{run_label} joint {_short(joint_id)}",
                 compartment_id=builder.compartment_for_point(
                     x, y, z, declared_compartment
                 ),

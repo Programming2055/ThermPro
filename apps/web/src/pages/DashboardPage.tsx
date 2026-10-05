@@ -60,16 +60,17 @@ export function DashboardPage() {
         />
         <DashCard
           title="Calculation Runs"
-          description="Submit and track thermal calculation jobs."
+          description="Submit, run, and review thermal calculations."
           href="/calculation-runs"
           accent="neutral"
         />
       </div>
 
       <div className={styles.notice}>
-        <strong>ENGINE_NOT_IMPLEMENTED</strong> — The thermal solver has not been integrated in
-        Milestone 1. All calculation submissions are accepted and stored with status{" "}
-        <code>ENGINE_NOT_IMPLEMENTED</code>. No thermal results are computed.
+        <strong>MODE 1 needs a licensed dataset.</strong> The IEC TR 60890 coefficient
+        tables are licensed and are never shipped with this software (CR-ENG-002), so a
+        MODE 1 run fails until an administrator imports them. MODE 2 and MODE 3 compute
+        from first principles and need no import.
       </div>
     </div>
   );

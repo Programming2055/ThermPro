@@ -921,7 +921,7 @@ def _node_temperatures(
                     heat_generation_w=0.0,
                     net_heat_flux_w_per_m2=None,
                     entity_id=surf.surface_id,
-                    name=f"{surf.surface_id} ({label} face)",
+                    name=f"{surf.name or surf.surface_id} ({label} face)",
                     compartment_id=surf.compartment_id,
                 )
             )
@@ -936,7 +936,7 @@ def _node_temperatures(
                 heat_generation_w=0.0,
                 net_heat_flux_w_per_m2=None,
                 entity_id=surf.surface_id,
-                name=f"{surf.surface_id} (partition)",
+                name=f"{surf.name or surf.surface_id} (partition)",
                 compartment_id=surf.compartment_id,
             )
         )

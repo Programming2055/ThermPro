@@ -79,6 +79,10 @@ class SurfaceSnapshot:
     # (wall-mounted, abutting another cubicle). Such a surface exchanges no heat
     # with the surroundings, the conservative treatment required by M0-06.
     is_restricted: bool = False
+    # Human-readable label, e.g. "Front panel — Device chamber". The surface_id
+    # is a key and reads like one; a result that names surfaces by key is a
+    # result nobody can check.
+    name: str | None = None
 
     def __post_init__(self) -> None:
         if self.area_m2 <= 0:
