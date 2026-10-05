@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://thermpro.example.com/schemas/calculation-input/v1.0",
   "title": "ThermPro Calculation InputSnapshot v1.0",
-  "description": "Versioned calculation input accepted by thermpro_engine. Revision 1: arc flash removed; MVP standards only; K_AC and joint_condition added; library_manifest required. See M0-01, M0-03, M0-08.",
+  "description": "Versioned calculation input accepted by thermpro_engine. Revision 2: electrical, geometric and fan-curve properties the solver needs are inlined on conductors, devices, busbar segments and fans, because thermpro_engine must not query a library (CR-TECH-001). Fan operating states use the DR-005 names (RUNNING_FORWARD, REVERSE_FLOW_ESTIMATED); the superseded FORWARD_OPERATING and ESTIMATED_REVERSE_FLOW spellings are gone. All additions are optional. See M0-01, M0-03, M0-08.",
   "type": "object",
   "required": [
     "schema_version",
@@ -15,19 +15,21 @@
   ],
   "additionalProperties": false,
   "properties": {
-
     "schema_version": {
       "type": "string",
       "const": "1.0",
       "description": "InputSnapshot schema version. Increment on breaking changes."
     },
-
     "mode": {
       "type": "string",
-      "enum": ["MODE_1", "MODE_2", "MODE_3", "MODE_4"],
+      "enum": [
+        "MODE_1",
+        "MODE_2",
+        "MODE_3",
+        "MODE_4"
+      ],
       "description": "Calculation mode. MODE_1=IEC TR 60890; MODE_2=Nodal; MODE_3=Forced-ventilation; MODE_4=CFD adapter. ARC_FLASH removed from scope (DR-008)."
     },
-
     "standard_profile": {
       "type": "array",
       "description": "Standards against which results are checked. MVP scope only. North American profiles deferred (DR-007).",
@@ -43,22 +45,34 @@
         ]
       }
     },
-
     "library_manifest": {
       "type": "object",
       "description": "Pinned library versions for this calculation. Solver validates content hash before proceeding. See M0-09.",
       "additionalProperties": false,
       "properties": {
-        "material_library": { "$ref": "#/$defs/LibraryPin" },
-        "device_library": { "$ref": "#/$defs/LibraryPin" },
-        "conductor_library": { "$ref": "#/$defs/LibraryPin" },
-        "ventilation_device_library": { "$ref": "#/$defs/LibraryPin" },
-        "iec60890_coefficient_library": { "$ref": "#/$defs/LibraryPin" },
-        "busbar_joint_library": { "$ref": "#/$defs/LibraryPin" },
-        "ac_resistance_library": { "$ref": "#/$defs/LibraryPin" }
+        "material_library": {
+          "$ref": "#/$defs/LibraryPin"
+        },
+        "device_library": {
+          "$ref": "#/$defs/LibraryPin"
+        },
+        "conductor_library": {
+          "$ref": "#/$defs/LibraryPin"
+        },
+        "ventilation_device_library": {
+          "$ref": "#/$defs/LibraryPin"
+        },
+        "iec60890_coefficient_library": {
+          "$ref": "#/$defs/LibraryPin"
+        },
+        "busbar_joint_library": {
+          "$ref": "#/$defs/LibraryPin"
+        },
+        "ac_resistance_library": {
+          "$ref": "#/$defs/LibraryPin"
+        }
       }
     },
-
     "service_conditions": {
       "type": "object",
       "description": "Operating service conditions per IEC 61439 clause 7.1.",
@@ -98,12 +112,16 @@
         },
         "pollution_degree": {
           "type": "integer",
-          "enum": [1, 2, 3, 4],
+          "enum": [
+            1,
+            2,
+            3,
+            4
+          ],
           "description": "Pollution degree per IEC 60664-1."
         }
       }
     },
-
     "enclosure": {
       "type": "object",
       "description": "Full enclosure geometry snapshot. All dimensions in metres (m). See M0-10 for unit conventions.",
@@ -119,8 +137,13 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "name": { "type": "string" },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string"
+        },
         "external_height_m": {
           "type": "number",
           "exclusiveMinimum": 0,
@@ -156,7 +179,14 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["FRONT", "REAR", "LEFT", "RIGHT", "TOP", "BOTTOM"]
+            "enum": [
+              "FRONT",
+              "REAR",
+              "LEFT",
+              "RIGHT",
+              "TOP",
+              "BOTTOM"
+            ]
           },
           "description": "Surfaces that cannot exchange heat with surroundings (wall-mounted etc.)."
         },
@@ -164,16 +194,30 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["id", "position"],
+            "required": [
+              "id",
+              "position"
+            ],
             "additionalProperties": false,
             "properties": {
-              "id": { "type": "string", "format": "uuid" },
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
               "position": {
                 "type": "string",
-                "enum": ["LEFT", "RIGHT", "ABOVE", "BELOW"]
+                "enum": [
+                  "LEFT",
+                  "RIGHT",
+                  "ABOVE",
+                  "BELOW"
+                ]
               },
               "shared_wall_conductance_W_K": {
-                "type": ["number", "null"],
+                "type": [
+                  "number",
+                  "null"
+                ],
                 "description": "Thermal conductance of shared wall [W/K]. Null = adiabatic (conservative default)."
               }
             }
@@ -181,31 +225,42 @@
         },
         "compartments": {
           "type": "array",
-          "items": { "$ref": "#/$defs/Compartment" }
+          "items": {
+            "$ref": "#/$defs/Compartment"
+          }
         },
         "devices": {
           "type": "array",
-          "items": { "$ref": "#/$defs/Device" }
+          "items": {
+            "$ref": "#/$defs/Device"
+          }
         },
         "busbar_runs": {
           "type": "array",
-          "items": { "$ref": "#/$defs/BusbarRun" }
+          "items": {
+            "$ref": "#/$defs/BusbarRun"
+          }
         },
         "conductors": {
           "type": "array",
-          "items": { "$ref": "#/$defs/Conductor" }
+          "items": {
+            "$ref": "#/$defs/Conductor"
+          }
         },
         "fans": {
           "type": "array",
-          "items": { "$ref": "#/$defs/Fan" }
+          "items": {
+            "$ref": "#/$defs/Fan"
+          }
         },
         "external_openings": {
           "type": "array",
-          "items": { "$ref": "#/$defs/ExternalOpening" }
+          "items": {
+            "$ref": "#/$defs/ExternalOpening"
+          }
         }
       }
     },
-
     "solver_settings": {
       "type": "object",
       "description": "Numerical solver convergence parameters.",
@@ -272,16 +327,24 @@
       }
     }
   },
-
   "$defs": {
-
     "LibraryPin": {
       "type": "object",
-      "required": ["name", "version", "content_hash_sha256"],
+      "required": [
+        "name",
+        "version",
+        "content_hash_sha256"
+      ],
       "additionalProperties": false,
       "properties": {
-        "name": { "type": "string", "description": "Library name, e.g. 'MaterialLibrary'." },
-        "version": { "type": "string", "description": "Semantic version, e.g. '1.2.0'." },
+        "name": {
+          "type": "string",
+          "description": "Library name, e.g. 'MaterialLibrary'."
+        },
+        "version": {
+          "type": "string",
+          "description": "Semantic version, e.g. '1.2.0'."
+        },
         "content_hash_sha256": {
           "type": "string",
           "pattern": "^[a-f0-9]{64}$",
@@ -289,42 +352,112 @@
         }
       }
     },
-
     "Compartment": {
       "type": "object",
-      "required": ["id", "position_x_m", "position_y_m", "position_z_m", "width_m", "height_m", "depth_m"],
+      "required": [
+        "id",
+        "position_x_m",
+        "position_y_m",
+        "position_z_m",
+        "width_m",
+        "height_m",
+        "depth_m"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "name": { "type": "string" },
-        "position_x_m": { "type": "number", "description": "Lower-left-front x coordinate [m]." },
-        "position_y_m": { "type": "number", "description": "Lower-left-front y coordinate [m]." },
-        "position_z_m": { "type": "number", "description": "Lower-left-front z coordinate [m]." },
-        "width_m": { "type": "number", "exclusiveMinimum": 0, "description": "[m]" },
-        "height_m": { "type": "number", "exclusiveMinimum": 0, "description": "[m]" },
-        "depth_m": { "type": "number", "exclusiveMinimum": 0, "description": "[m]" },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string"
+        },
+        "position_x_m": {
+          "type": "number",
+          "description": "Lower-left-front x coordinate [m]."
+        },
+        "position_y_m": {
+          "type": "number",
+          "description": "Lower-left-front y coordinate [m]."
+        },
+        "position_z_m": {
+          "type": "number",
+          "description": "Lower-left-front z coordinate [m]."
+        },
+        "width_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "[m]"
+        },
+        "height_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "[m]"
+        },
+        "depth_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "[m]"
+        },
         "partitions": {
           "type": "array",
-          "items": { "$ref": "#/$defs/Partition" }
+          "items": {
+            "$ref": "#/$defs/Partition"
+          }
         },
         "internal_openings": {
           "type": "array",
-          "items": { "$ref": "#/$defs/InternalOpening" }
+          "items": {
+            "$ref": "#/$defs/InternalOpening"
+          }
+        },
+        "is_sealed": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when the compartment has no ventilation path to the enclosure."
         }
       }
     },
-
     "Partition": {
       "type": "object",
-      "required": ["id", "orientation", "position_m", "thickness_m", "thermal_conductivity_W_mK", "is_perforated"],
+      "required": [
+        "id",
+        "orientation",
+        "position_m",
+        "thickness_m",
+        "thermal_conductivity_W_mK",
+        "is_perforated"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "orientation": { "type": "string", "enum": ["HORIZONTAL", "VERTICAL"] },
-        "position_m": { "type": "number", "description": "Offset from compartment origin along relevant axis [m]." },
-        "thickness_m": { "type": "number", "exclusiveMinimum": 0, "description": "[m]" },
-        "thermal_conductivity_W_mK": { "type": "number", "exclusiveMinimum": 0, "description": "[W/(m·K)]" },
-        "is_perforated": { "type": "boolean" },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "orientation": {
+          "type": "string",
+          "enum": [
+            "HORIZONTAL",
+            "VERTICAL"
+          ]
+        },
+        "position_m": {
+          "type": "number",
+          "description": "Offset from compartment origin along relevant axis [m]."
+        },
+        "thickness_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "[m]"
+        },
+        "thermal_conductivity_W_mK": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "[W/(m·K)]"
+        },
+        "is_perforated": {
+          "type": "boolean"
+        },
         "open_area_fraction": {
           "type": "number",
           "minimum": 0.0,
@@ -333,15 +466,29 @@
         }
       }
     },
-
     "InternalOpening": {
       "type": "object",
-      "required": ["id", "gross_area_m2", "open_area_fraction", "discharge_coefficient"],
+      "required": [
+        "id",
+        "gross_area_m2",
+        "open_area_fraction",
+        "discharge_coefficient"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "partition_id": { "type": "string", "format": "uuid" },
-        "gross_area_m2": { "type": "number", "exclusiveMinimum": 0, "description": "Total face area of opening [m²]." },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "partition_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "gross_area_m2": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Total face area of opening [m²]."
+        },
         "open_area_fraction": {
           "type": "number",
           "minimum": 0.0,
@@ -354,11 +501,16 @@
           "maximum": 1.0,
           "description": "Cd. effective_area = Cd × net_free_area. Default 0.6 for sharp-edged openings."
         },
-        "position_x_m": { "type": "number", "description": "[m]" },
-        "position_y_m": { "type": "number", "description": "[m]" }
+        "position_x_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "position_y_m": {
+          "type": "number",
+          "description": "[m]"
+        }
       }
     },
-
     "Device": {
       "type": "object",
       "required": [
@@ -374,32 +526,146 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "name": { "type": "string" },
-        "device_library_id": { "type": "string", "format": "uuid" },
-        "compartment_id": { "type": ["string", "null"], "format": "uuid" },
-        "position_x_m": { "type": "number", "description": "[m]" },
-        "position_y_m": { "type": "number", "description": "[m]" },
-        "position_z_m": { "type": "number", "description": "[m]" },
-        "load_current_A": { "type": "number", "minimum": 0, "description": "[A]" },
-        "rated_current_A": { "type": "number", "exclusiveMinimum": 0, "description": "[A]" },
-        "phase_count": { "type": "integer", "enum": [1, 2, 3] },
-        "thermal_model": { "type": "string", "enum": ["QUADRATIC", "LINEAR", "FIXED_POWER"] },
-        "power_at_rated_W": { "type": "number", "minimum": 0, "description": "Source value from library [W]. Never silently modified." },
-        "power_coefficient_a": { "type": ["number", "null"], "description": "Quadratic coefficient a [W/A²]." },
-        "power_coefficient_b": { "type": ["number", "null"], "description": "Linear coefficient b [W/A]." },
-        "power_coefficient_c": { "type": ["number", "null"], "description": "Constant term c [W]." },
-        "power_uncertainty_min_W": { "type": ["number", "null"], "description": "Minimum loss for sensitivity scenario [W]." },
-        "power_uncertainty_max_W": { "type": ["number", "null"], "description": "Maximum loss for sensitivity scenario [W]." },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string"
+        },
+        "device_library_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "compartment_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "position_x_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "position_y_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "position_z_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "load_current_A": {
+          "type": "number",
+          "minimum": 0,
+          "description": "[A]"
+        },
+        "rated_current_A": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "[A]"
+        },
+        "phase_count": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3
+          ]
+        },
+        "thermal_model": {
+          "type": "string",
+          "enum": [
+            "QUADRATIC",
+            "LINEAR",
+            "FIXED_POWER"
+          ]
+        },
+        "power_at_rated_W": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Source value from library [W]. Never silently modified."
+        },
+        "power_coefficient_a": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Quadratic coefficient a [W/A²]."
+        },
+        "power_coefficient_b": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Linear coefficient b [W/A]."
+        },
+        "power_coefficient_c": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Constant term c [W]."
+        },
+        "power_uncertainty_min_W": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Minimum loss for sensitivity scenario [W]."
+        },
+        "power_uncertainty_max_W": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Maximum loss for sensitivity scenario [W]."
+        },
         "data_confidence": {
           "type": "string",
-          "enum": ["HIGH", "MEDIUM", "LOW", "UNKNOWN"],
+          "enum": [
+            "HIGH",
+            "MEDIUM",
+            "LOW",
+            "UNKNOWN"
+          ],
           "description": "When LOW or UNKNOWN: solver emits DATA_CONFIDENCE_LOW flag. No silent margin applied (DR-009)."
         },
-        "max_operating_temp_C": { "type": ["number", "null"], "description": "Maximum device operating temperature [°C]." }
+        "max_operating_temp_C": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Maximum device operating temperature [°C]."
+        },
+        "surface_area_m2": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "description": "Exposed surface area of the device body [m²]. Required for a device temperature to be computed; without it the loss is released into the compartment air and the device reports the air temperature."
+        },
+        "volume_m3": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "description": "Bounding volume of the device body [m³]."
+        },
+        "emissivity": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Surface emissivity of the device body for internal radiation."
+        }
       }
     },
-
     "BusbarRun": {
       "type": "object",
       "required": [
@@ -417,13 +683,37 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "name": { "type": "string" },
-        "phase_label": { "type": "string", "description": "e.g. 'L1', 'N', 'PE'." },
-        "current_A": { "type": "number", "minimum": 0, "description": "[A]" },
-        "cross_section_m2": { "type": "number", "exclusiveMinimum": 0, "description": "width_m × thickness_m [m²]." },
-        "width_m": { "type": "number", "exclusiveMinimum": 0, "description": "Bar width [m]." },
-        "thickness_m": { "type": "number", "exclusiveMinimum": 0, "description": "Bar thickness [m]." },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phase_label": {
+          "type": "string",
+          "description": "e.g. 'L1', 'N', 'PE'."
+        },
+        "current_A": {
+          "type": "number",
+          "minimum": 0,
+          "description": "[A]"
+        },
+        "cross_section_m2": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "width_m × thickness_m [m²]."
+        },
+        "width_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Bar width [m]."
+        },
+        "thickness_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Bar thickness [m]."
+        },
         "resistivity_ohm_m": {
           "type": "number",
           "exclusiveMinimum": 0,
@@ -447,52 +737,114 @@
         "segments": {
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/BusbarSegment" }
+          "items": {
+            "$ref": "#/$defs/BusbarSegment"
+          }
         },
         "joints": {
           "type": "array",
-          "items": { "$ref": "#/$defs/BusbarJoint" }
+          "items": {
+            "$ref": "#/$defs/BusbarJoint"
+          }
+        },
+        "compartment_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Compartment the run sits in. Null assigns it to the first compartment."
         }
       }
     },
-
     "BusbarSegment": {
       "type": "object",
       "required": [
         "id",
-        "start_x_m", "start_y_m", "start_z_m",
-        "end_x_m", "end_y_m", "end_z_m",
+        "start_x_m",
+        "start_y_m",
+        "start_z_m",
+        "end_x_m",
+        "end_y_m",
+        "end_z_m",
         "length_m"
       ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "start_x_m": { "type": "number", "description": "[m]" },
-        "start_y_m": { "type": "number", "description": "[m]" },
-        "start_z_m": { "type": "number", "description": "[m]" },
-        "end_x_m": { "type": "number", "description": "[m]" },
-        "end_y_m": { "type": "number", "description": "[m]" },
-        "end_z_m": { "type": "number", "description": "[m]" },
-        "length_m": { "type": "number", "exclusiveMinimum": 0, "description": "Segment length [m]. Computed from start/end; must be consistent." },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "start_x_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "start_y_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "start_z_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "end_x_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "end_y_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "end_z_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "length_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Segment length [m]. Computed from start/end; must be consistent."
+        },
         "k_ac_factor": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "minimum": 1.0,
           "description": "Level 2 AC resistance correction factor K_AC ≥ 1.0. Null = DC only (CR-ENG-011: triggers warning if AC effects may be significant)."
         },
         "k_ac_source": {
-          "type": ["string", "null"],
-          "enum": ["MANUFACTURER", "VALIDATED_CORRELATION", "GEOMETRY_FREQUENCY_LIBRARY", "USER_INPUT", "NOT_APPLIED", null],
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "MANUFACTURER",
+            "VALIDATED_CORRELATION",
+            "GEOMETRY_FREQUENCY_LIBRARY",
+            "USER_INPUT",
+            "NOT_APPLIED",
+            null
+          ],
           "description": "Source of K_AC value. Required (non-null) when k_ac_factor is set."
+        },
+        "surface_area_m2": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "description": "Exposed surface area of the segment [m²]. Defaults to the perimeter of the bar times its length when omitted."
         }
       }
     },
-
     "BusbarJoint": {
       "type": "object",
       "required": [
         "id",
         "segment_a_id",
-        "position_x_m", "position_y_m", "position_z_m",
+        "position_x_m",
+        "position_y_m",
+        "position_z_m",
         "joint_condition",
         "temp_coefficient_contact_1_K",
         "temp_ref_C",
@@ -500,39 +852,88 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "segment_a_id": { "type": "string", "format": "uuid" },
-        "segment_b_id": { "type": ["string", "null"], "format": "uuid" },
-        "position_x_m": { "type": "number", "description": "[m]" },
-        "position_y_m": { "type": "number", "description": "[m]" },
-        "position_z_m": { "type": "number", "description": "[m]" },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "segment_a_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "segment_b_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "position_x_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "position_y_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "position_z_m": {
+          "type": "number",
+          "description": "[m]"
+        },
         "joint_condition": {
           "type": "string",
-          "enum": ["NEW_VALIDATED", "NEW_ASSUMED", "MEASURED", "AGED", "DEGRADED", "UNKNOWN"],
+          "enum": [
+            "NEW_VALIDATED",
+            "NEW_ASSUMED",
+            "MEASURED",
+            "AGED",
+            "DEGRADED",
+            "UNKNOWN"
+          ],
           "description": "Joint physical condition per DR-004. UNKNOWN requires sensitivity_min/nominal/max_ohm."
         },
         "contact_resistance_ref_ohm": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "exclusiveMinimum": 0,
           "description": "Contact resistance at temp_ref_C [Ω]. Required when joint_condition ≠ UNKNOWN. No default value (DR-004)."
         },
         "contact_resistance_source": {
-          "type": ["string", "null"],
-          "enum": ["MEASURED", "MANUFACTURER", "JOINT_LIBRARY", "USER_ASSUMPTION", null],
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "MEASURED",
+            "MANUFACTURER",
+            "JOINT_LIBRARY",
+            "USER_ASSUMPTION",
+            null
+          ],
           "description": "Data source hierarchy per DR-004. Required when contact_resistance_ref_ohm is set."
         },
         "sensitivity_min_ohm": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "exclusiveMinimum": 0,
           "description": "Lower bound for sensitivity scenario [Ω]. Required when joint_condition = UNKNOWN."
         },
         "sensitivity_nominal_ohm": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "exclusiveMinimum": 0,
           "description": "Nominal value for sensitivity scenario [Ω]. Required when joint_condition = UNKNOWN."
         },
         "sensitivity_max_ohm": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "exclusiveMinimum": 0,
           "description": "Upper bound for sensitivity scenario [Ω]. Required when joint_condition = UNKNOWN."
         },
@@ -540,61 +941,200 @@
           "type": "number",
           "description": "Temperature coefficient for contact resistance [1/K]."
         },
-        "temp_ref_C": { "type": "number", "default": 20.0, "description": "Reference temperature [°C]." },
-        "assembly_torque_Nm": { "type": ["number", "null"], "description": "Measured torque at assembly [N·m]." },
-        "torque_specification_Nm": { "type": ["number", "null"], "description": "Manufacturer torque specification [N·m]." },
+        "temp_ref_C": {
+          "type": "number",
+          "default": 20.0,
+          "description": "Reference temperature [°C]."
+        },
+        "assembly_torque_Nm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Measured torque at assembly [N·m]."
+        },
+        "torque_specification_Nm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Manufacturer torque specification [N·m]."
+        },
         "torque_compliance": {
-          "type": ["string", "null"],
-          "enum": ["COMPLIANT", "NON_COMPLIANT", "NOT_CHECKED", null]
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "COMPLIANT",
+            "NON_COMPLIANT",
+            "NOT_CHECKED",
+            null
+          ]
         },
         "data_confidence": {
           "type": "string",
-          "enum": ["HIGH", "MEDIUM", "LOW", "UNKNOWN"]
+          "enum": [
+            "HIGH",
+            "MEDIUM",
+            "LOW",
+            "UNKNOWN"
+          ]
+        },
+        "surface_area_m2": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "description": "Exposed surface area of the joint [m²]."
         }
       }
     },
-
     "Conductor": {
       "type": "object",
-      "required": ["id", "conductor_library_id", "length_m", "current_A"],
+      "required": [
+        "id",
+        "conductor_library_id",
+        "length_m",
+        "current_A"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "name": { "type": "string" },
-        "conductor_library_id": { "type": "string", "format": "uuid" },
-        "length_m": { "type": "number", "exclusiveMinimum": 0, "description": "[m]" },
-        "current_A": { "type": "number", "minimum": 0, "description": "[A]" },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "name": {
+          "type": "string"
+        },
+        "conductor_library_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "length_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "[m]"
+        },
+        "current_A": {
+          "type": "number",
+          "minimum": 0,
+          "description": "[A]"
+        },
         "bundling_factor": {
           "type": "number",
           "minimum": 0,
           "maximum": 1,
           "default": 1.0,
           "description": "Current derating factor for bundled cables. 1.0 = single cable in free air."
+        },
+        "resistance_ohm_per_m": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "description": "DC resistance per metre at temp_ref_C [Ω/m]. Resolved from the conductor library at the API boundary: thermpro_engine never queries a library (CR-TECH-001), so the value must be inlined here for the conductor to be modelled."
+        },
+        "temp_coefficient_1_K": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Temperature coefficient of resistance [1/K]. Cu: 0.00393; Al: 0.00403."
+        },
+        "temp_ref_C": {
+          "type": "number",
+          "default": 20.0,
+          "description": "Reference temperature for resistance_ohm_per_m [°C]."
+        },
+        "rated_current_A": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "description": "Rated current [A], used to report the loading factor."
+        },
+        "surface_area_m2": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "description": "Exposed surface area of the run [m²]. Required for a conductor temperature to be computed; without it the loss is released into the compartment air."
+        },
+        "emissivity": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Surface emissivity of the conductor sheath."
+        },
+        "compartment_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Compartment the run sits in. Null assigns it to the first compartment."
         }
       }
     },
-
     "Fan": {
       "type": "object",
       "required": [
         "id",
         "ventilation_device_library_id",
-        "position_x_m", "position_y_m", "position_z_m",
+        "position_x_m",
+        "position_y_m",
+        "position_z_m",
         "orientation",
         "mounting_surface",
         "operating_state"
       ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "ventilation_device_library_id": { "type": "string", "format": "uuid" },
-        "position_x_m": { "type": "number", "description": "[m]" },
-        "position_y_m": { "type": "number", "description": "[m]" },
-        "position_z_m": { "type": "number", "description": "[m]" },
-        "orientation": { "type": "string", "enum": ["INLET", "OUTLET"] },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "ventilation_device_library_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "position_x_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "position_y_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "position_z_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "orientation": {
+          "type": "string",
+          "enum": [
+            "INLET",
+            "OUTLET"
+          ]
+        },
         "mounting_surface": {
           "type": "string",
-          "enum": ["FRONT", "REAR", "LEFT", "RIGHT", "TOP", "BOTTOM"]
+          "enum": [
+            "FRONT",
+            "REAR",
+            "LEFT",
+            "RIGHT",
+            "TOP",
+            "BOTTOM"
+          ]
         },
         "operating_state": {
           "type": "string",
@@ -610,12 +1150,80 @@
           "description": "Fan operating condition per DR-005. STOPPED_WITH_DAMPER and FAILED_BLOCKED block flow. Others allow reverse flow analysis."
         },
         "fan_loss_coefficient_K": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "Duct loss coefficient for non-operating states (STOPPED_FREE_FLOW, FAILED_OPEN, REVERSE_FLOW_ESTIMATED). Null uses library default."
+        },
+        "fan_curve": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "description": "Manufacturer pressure-flow curve, ascending by flow. When present the engine finds the operating point against the system resistance built from the enclosure's openings, rather than taking a flow on trust. Resolved from the ventilation device library at the API boundary (CR-TECH-001).",
+          "items": {
+            "type": "object",
+            "required": [
+              "flow_m3_s",
+              "static_pressure_Pa"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "flow_m3_s": {
+                "type": "number",
+                "minimum": 0,
+                "description": "[m³/s]"
+              },
+              "static_pressure_Pa": {
+                "type": "number",
+                "minimum": 0,
+                "description": "[Pa]"
+              },
+              "power_W": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "Shaft power [W]."
+              },
+              "efficiency": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        },
+        "prescribed_flow_m3_s": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Volumetric flow imposed on the fan opening [m³/s]. Used when no fan_curve is supplied. Ignored when fan_curve is present, since the curve gives the actual operating point."
+        },
+        "free_area_m2": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0,
+          "description": "Net free area of the fan aperture [m²]. Defaults to 0.01 m²."
+        },
+        "motor_power_loss_W": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Motor loss dissipated inside the enclosure [W]. IEC TR 60890 §11.1 counts fan motor loss in P_tot, so it is a heat source like any other."
         }
       }
     },
-
     "ExternalOpening": {
       "type": "object",
       "required": [
@@ -625,18 +1233,36 @@
         "gross_area_m2",
         "open_area_fraction",
         "discharge_coefficient",
-        "position_x_m", "position_y_m", "position_z_m"
+        "position_x_m",
+        "position_y_m",
+        "position_z_m"
       ],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "format": "uuid" },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
         "opening_type": {
           "type": "string",
-          "enum": ["LOUVRE", "GLAND_PLATE", "VENTILATION_SLOT", "CABLE_ENTRY", "OTHER"]
+          "enum": [
+            "LOUVRE",
+            "GLAND_PLATE",
+            "VENTILATION_SLOT",
+            "CABLE_ENTRY",
+            "OTHER"
+          ]
         },
         "mounting_surface": {
           "type": "string",
-          "enum": ["FRONT", "REAR", "LEFT", "RIGHT", "TOP", "BOTTOM"]
+          "enum": [
+            "FRONT",
+            "REAR",
+            "LEFT",
+            "RIGHT",
+            "TOP",
+            "BOTTOM"
+          ]
         },
         "gross_area_m2": {
           "type": "number",
@@ -656,11 +1282,23 @@
           "default": 0.6,
           "description": "Cd. effective_area_m2 = Cd × net_free_area_m2. Applied once only."
         },
-        "position_x_m": { "type": "number", "description": "[m]" },
-        "position_y_m": { "type": "number", "description": "[m]" },
-        "position_z_m": { "type": "number", "description": "[m]" },
+        "position_x_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "position_y_m": {
+          "type": "number",
+          "description": "[m]"
+        },
+        "position_z_m": {
+          "type": "number",
+          "description": "[m]"
+        },
         "filter_pressure_drop_Pa": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "Additional pressure drop from filter at nominal flow [Pa]. Absolute Pa."
         }
       }

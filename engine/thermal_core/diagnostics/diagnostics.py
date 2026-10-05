@@ -71,6 +71,11 @@ class ConvergenceMonitor:
         self._history.append(trace)
         return trace
 
+    @property
+    def history(self) -> tuple[ConvergenceTrace, ...]:
+        """Trace rows recorded so far, oldest first."""
+        return tuple(self._history)
+
     def is_converged(self, trace: ConvergenceTrace) -> bool:
         """Return True if the latest trace row meets the convergence criterion."""
         return trace.max_delta_k < self.tolerance_k

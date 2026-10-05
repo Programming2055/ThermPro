@@ -302,7 +302,7 @@ Project (1)
 | `position_z_m` | float | | |
 | `orientation` | enum | INLET / OUTLET | |
 | `mounting_surface` | enum | FRONT / REAR / LEFT / RIGHT / TOP / BOTTOM | |
-| `operating_state` | enum | FORWARD_OPERATING / STOPPED_FREE_FLOW / STOPPED_WITH_DAMPER / FAILED_OPEN / FAILED_BLOCKED / ESTIMATED_REVERSE_FLOW | Default: FORWARD_OPERATING |
+| `operating_state` | enum | RUNNING_FORWARD / STOPPED_FREE_FLOW / STOPPED_WITH_DAMPER / FAILED_OPEN / FAILED_BLOCKED / REVERSE_FLOW_ESTIMATED | Default: RUNNING_FORWARD |
 | `fan_loss_coefficient_K` | float | optional | K for fan duct resistance in non-operating states |
 
 ---
@@ -578,6 +578,6 @@ LibraryRelease    1 ──── N   ACResistanceLibrary (entries)
 | MountingSurface | FRONT, REAR, LEFT, RIGHT, TOP, BOTTOM |
 | PollutionDegree | 1, 2, 3, 4 |
 | OperatingMode | CONTINUOUS, INTERMITTENT, SHORT_TIME |
-| FanOperatingState | FORWARD_OPERATING, STOPPED_FREE_FLOW, STOPPED_WITH_DAMPER, FAILED_OPEN, FAILED_BLOCKED, ESTIMATED_REVERSE_FLOW |
+| FanOperatingState | RUNNING_FORWARD, STOPPED_FREE_FLOW, STOPPED_WITH_DAMPER, FAILED_OPEN, FAILED_BLOCKED, REVERSE_FLOW_ESTIMATED |
 | KAcSource | MANUFACTURER, VALIDATED_CORRELATION, GEOMETRY_FREQUENCY_LIBRARY, USER_INPUT, NOT_APPLIED |
 | LibraryStatus | DRAFT, APPROVED, SUPERSEDED, WITHDRAWN |

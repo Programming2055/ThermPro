@@ -29,9 +29,16 @@ class SolverStatus(str, Enum):
 class NodeType(str, Enum):
     """Type of thermal network node in the result."""
     AIR = "AIR"            # compartment mean air temperature
-    SURFACE = "SURFACE"    # enclosure wall / partition surface
-    DEVICE = "DEVICE"      # device casing temperature (where computed)
+    SURFACE = "SURFACE"    # outer face of an external wall — operator-accessible
+    # Inner wall faces and internal partitions. Kept distinct from SURFACE
+    # because the IEC 61439 accessible-surface limit applies to what an
+    # operator can touch, and nobody touches the inside of a closed enclosure.
+    INTERNAL_SURFACE = "INTERNAL_SURFACE"
+    DEVICE = "DEVICE"      # device casing temperature
     BUSBAR = "BUSBAR"      # busbar conductor temperature
+    JOINT = "JOINT"        # busbar joint / bolted connection
+    CABLE = "CABLE"        # cable or conductor run
+    ENTITY = "ENTITY"      # any other heat-generating entity body
     AMBIENT = "AMBIENT"    # external environment (fixed boundary)
 
 
@@ -52,6 +59,12 @@ class NodeTemperature:
     temperature_k: float
     heat_generation_w: float        # power injected at this node [W]
     net_heat_flux_w_per_m2: float | None  # None for non-surface nodes
+    # Links the node back to the engineering entity it represents, so the API
+    # layer can report temperatures against the user's own objects rather than
+    # against internal node ids.
+    entity_id: str | None = None
+    name: str | None = None
+    compartment_id: str | None = None
 
     def temperature_celsius(self) -> float:
         """Convenience accessor — NOT used inside the solver (CR-ENG-013)."""
@@ -116,6 +129,38 @@ class CompartmentResult:
 
 
 @dataclass(frozen=True)
+class OpeningFlow:
+    """
+    Volumetric air flow through one ventilation opening.
+
+    Sign convention: positive means air flows *into* the enclosure (or into
+    `to_compartment_id`), negative means it flows out. Reverse flow is reported
+    rather than clamped to zero, per DR-005.
+    """
+    opening_id: str
+    volumetric_flow_m3_per_s: float
+    mass_flow_kg_per_s: float
+    is_forced: bool
+
+    @property
+    def direction(self) -> str:
+        """\"IN\" when air enters, \"OUT\" when it leaves."""
+        return "IN" if self.volumetric_flow_m3_per_s >= 0.0 else "OUT"
+
+
+@dataclass(frozen=True)
+class AirflowSummary:
+    """
+    Airflow-network results for MODE 2 (buoyancy) and MODE 3 (forced).
+
+    None on a result means no airflow network was solved.
+    """
+    total_flow_rate_m3_per_s: float
+    buoyancy_stack_pressure_pa: float | None
+    opening_flows: tuple[OpeningFlow, ...]
+
+
+@dataclass(frozen=True)
 class SolverWarning:
     """
     A structured engineering warning from the solver.
@@ -169,10 +214,20 @@ class ResultSnapshot:
     # Structured warnings (ordered by severity)
     warnings: tuple[SolverWarning, ...]
 
+    # Airflow network results; None when no ventilation was modelled.
+    airflow: AirflowSummary | None = None
+
+    # IEC TR 60890 outputs; populated only for MODE_1.
+    mode_1: Mode1Result | None = None
+
     @property
     def is_valid(self) -> bool:
         """True only if the result is converged and may be used for compliance."""
         return self.status == SolverStatus.CONVERGED
+
+    def entity_temperatures(self) -> tuple[NodeTemperature, ...]:
+        """Node temperatures that correspond to a user-visible entity."""
+        return tuple(n for n in self.node_temperatures if n.entity_id is not None)
 
     def max_air_temperature_k(self) -> float | None:
         """Maximum compartment air temperature across all compartments [K]."""
@@ -194,3 +249,25 @@ class ResultSnapshot:
             if cr.compartment_id == compartment_id:
                 return cr
         return None
+
+
+# ---------------------------------------------------------------------------
+# IEC TR 60890 (MODE 1) outputs
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Mode1Result:
+    """
+    IEC TR 60890 empirical results (MODE 1).
+
+    CR-ENG-002: every coefficient behind these numbers comes from the
+    administrator-imported licensed dataset, never from this repository.
+    All temperature rises in kelvin (CR-ENG-003).
+    """
+    p_total_w: float
+    effective_cooling_area_m2: float
+    coefficient_c: float
+    delta_theta_mid_k: float
+    delta_theta_top_k: float
+    delta_theta_total_k: float

@@ -1,34 +1,37 @@
 """
-IEC TR 60890 empirical method benchmark framework.
+IEC TR 60890 empirical temperature-rise method (MODE 1) — calculation framework.
 
-CR-ENG-002: The IEC TR 60890 coefficient tables are NEVER shipped in the
-             repository.  Administrators import the licensed dataset via
-             the admin upload endpoint.
+CR-ENG-002: the IEC TR 60890 coefficient tables are licensed and are NEVER
+shipped in this repository. This module implements only the *structure* of the
+method, exactly as set out in THERM-EQN-001 §11; every number it needs is
+injected through `IEC60890Coefficients`, which an administrator populates from
+the imported dataset.
 
-This module provides the calculation framework (equations and structure)
-WITHOUT the licensed coefficient values.  The coefficients are injected
-at runtime from the database-backed library.
+Structure (THERM-EQN-001 §11):
 
-IEC TR 60890 Method (MODE 1):
-  ΔT_e = b × P_total^c × (A_eff / A_ref)^d
+    P_tot      = Σ P_i                                   [W]      §11.1
+    A_e        = Σ (b_j · A_j)                           [m²]     §11.2
+    Δθ_mid     = c_0 · (P_tot / A_e)^n                   [K]      §11.3
+    Δθ_top     = d · Δθ_mid                              [K]      §11.4
+    Δθ(y)      = Δθ_mid · f(y / H)                       [K]      §11.5
 
-where:
-  ΔT_e     = estimated mean temperature rise above ambient [K]
-  P_total  = total power loss [W]
-  A_eff    = effective ventilation area [m²]
-  b, c, d  = empirically determined coefficients (LICENSED — not in repo)
-  A_ref    = reference area [m²] (LICENSED)
+where b_j is the installation factor for surface j, and c_0, n, d and f all
+come from the licensed dataset.
 
-This module implements:
-  1. The formula structure (with placeholder coefficient injection)
-  2. Effective area calculation from geometry
-  3. Applicability check (CR-ENG-006: MODE 1 disabled for forced ventilation)
+Note that A_e is the *effective cooling surface*, not the ventilation opening
+area. The two are different quantities and conflating them understates the
+temperature rise of a sealed enclosure, which is the very case the method is
+most often used to check.
 
-Equation reference: THERM-EQN-001 §8 (IEC TR 60890 Method)
+All values in SI base units (CR-ENG-013); all temperature rises in kelvin
+(CR-ENG-003).
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+import itertools
+import math
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 
 # ---------------------------------------------------------------------------
 # IEC TR 60890 applicability
@@ -38,24 +41,25 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class IEC60890Applicability:
     """
-    Applicability check result for IEC TR 60890 empirical method.
+    Applicability check result for the IEC TR 60890 empirical method.
 
     CR-ENG-006: forced ventilation → MODE_1 must not be used.
     """
+
     is_applicable: bool
-    reasons: tuple[str, ...]   # non-empty if not applicable
+    reasons: tuple[str, ...]  # non-empty if not applicable
 
 
 def check_iec60890_applicability(
     has_forced_ventilation: bool,
     has_busbars_with_unknown_losses: bool,
     form_type: str | None = None,
+    enclosure_height_m: float | None = None,
 ) -> IEC60890Applicability:
     """
     Check whether IEC TR 60890 (MODE 1) applies to the given configuration.
 
-    Returns an applicability result.  A non-applicable result means MODE_1
-    must not be used (CR-ENG-006).
+    A non-applicable result means MODE_1 must not be used (CR-ENG-006).
     """
     reasons: list[str] = []
 
@@ -77,133 +81,251 @@ def check_iec60890_applicability(
             "project-specific assessment. Consult the standard."
         )
 
-    return IEC60890Applicability(
-        is_applicable=len(reasons) == 0,
-        reasons=tuple(reasons),
-    )
+    # ASS-M1-003: the empirical correlation was derived for enclosures up to 2 m.
+    if enclosure_height_m is not None and enclosure_height_m > 2.0:
+        reasons.append(
+            f"IEC TR 60890 was derived for enclosures up to 2 m high; this enclosure "
+            f"is {enclosure_height_m:.2f} m (ASS-M1-003). Use MODE 2 instead."
+        )
+
+    return IEC60890Applicability(is_applicable=not reasons, reasons=tuple(reasons))
 
 
 # ---------------------------------------------------------------------------
-# Effective ventilation area
+# Areas
 # ---------------------------------------------------------------------------
 
 
-def effective_ventilation_area_m2(
+def effective_cooling_area_m2(
+    surfaces: Sequence[tuple[float, float]],
+) -> float:
+    """
+    Effective cooling surface A_e = Σ (b_j · A_j) [m²] — THERM-EQN-001 §11.2.
+
+    Parameters
+    ----------
+    surfaces:
+        (area_m2, installation_factor) for each surface that can dissipate heat.
+        Restricted surfaces (wall-mounted, abutting another cubicle) are either
+        omitted by the caller or passed with their own reduced factor.
+
+    Returns
+    -------
+    float
+        Effective cooling surface in m². Zero when no surface dissipates.
+    """
+    total = 0.0
+    for area_m2, factor in surfaces:
+        if area_m2 < 0:
+            raise ValueError(f"surface area must be >= 0 m²; got {area_m2}")
+        if factor < 0:
+            raise ValueError(f"installation factor must be >= 0; got {factor}")
+        total += area_m2 * factor
+    return total
+
+
+def ventilation_opening_area_m2(
     inlet_area_m2: float,
     outlet_area_m2: float,
 ) -> float:
     """
-    Effective ventilation area A_eff for IEC TR 60890 formula.
+    Ventilation opening area used to select the ventilated branch of the method.
 
-    A_eff = sqrt(A_inlet × A_outlet)   (geometric mean of inlet and outlet areas)
+    A_vent = sqrt(A_inlet × A_outlet), the geometric mean of the inlet and
+    outlet free areas. This is *not* the effective cooling surface A_e; see
+    `effective_cooling_area_m2` for that.
 
-    Both areas in m². Returns 0 if either is zero (no ventilation path).
+    Returns 0 when either opening is absent, i.e. the enclosure is sealed.
     """
     if inlet_area_m2 < 0 or outlet_area_m2 < 0:
         raise ValueError("ventilation areas must be >= 0")
     if inlet_area_m2 == 0 or outlet_area_m2 == 0:
         return 0.0
-    import math
     return math.sqrt(inlet_area_m2 * outlet_area_m2)
 
 
 # ---------------------------------------------------------------------------
-# Temperature-rise formula (coefficients injected at runtime)
+# Licensed coefficients
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class IEC60890Coefficients:
     """
-    IEC TR 60890 empirical coefficients.
+    IEC TR 60890 empirical coefficients, from the licensed dataset.
 
-    CR-ENG-002: these values are NEVER hard-coded in this module.
-    They must be loaded from the licensed dataset at runtime.
-    Only the structure is defined here; coefficients default to sentinel values
-    that will raise ValueError if mistakenly used without a licensed dataset.
+    CR-ENG-002: these values are never hard-coded in this repository. The
+    administrator imports them, and the API layer attaches them to the
+    InputSnapshot for a MODE_1 run.
+
+    Attributes
+    ----------
+    c0:
+        Enclosure constant in Δθ_mid = c_0 · (P_tot / A_e)^n [K·(m²/W)^n].
+    n:
+        Power-density exponent [-].
+    d:
+        Temperature-distribution factor, Δθ_top = d · Δθ_mid [-]. Must be ≥ 1:
+        the top of an enclosure is never cooler than its mid-height.
+    installation_factors:
+        Installation factor b_j per surface orientation key, e.g.
+        {"VERTICAL": 0.9, "HORIZONTAL_UP": 1.4, "HORIZONTAL_DOWN": 0.5}.
+    default_installation_factor:
+        Factor applied to a surface whose orientation key is absent.
+    height_distribution:
+        Optional (y/H, f) pairs for Δθ(y) = Δθ_mid · f(y/H) (§11.5),
+        interpolated linearly. Empty disables the height profile.
+    dataset_version:
+        Version tag of the imported dataset, carried into the audit trail.
     """
-    b: float   # temperature rise coefficient
-    c: float   # power exponent
-    d: float   # area exponent
-    a_ref_m2: float  # reference area [m²]
 
-    # Sentinel check: if b is exactly 0.0, the dataset has not been loaded
+    c0: float
+    n: float
+    d: float
+    installation_factors: dict[str, float] = field(default_factory=dict)
+    default_installation_factor: float = 1.0
+    height_distribution: tuple[tuple[float, float], ...] = ()
+    dataset_version: str = ""
+
     def __post_init__(self) -> None:
-        if self.b == 0.0:
+        # A zero c_0 means the import produced an empty template rather than a
+        # populated dataset; computing with it would silently report no rise.
+        if self.c0 <= 0.0:
             raise ValueError(
-                "IEC60890Coefficients.b = 0 indicates the licensed coefficient "
-                "dataset has not been loaded.  CR-ENG-002: import the dataset "
-                "via the admin upload endpoint before using MODE 1."
+                "IEC60890Coefficients.c0 must be > 0. A non-positive value means the "
+                "licensed coefficient dataset has not been imported. CR-ENG-002: an "
+                "administrator must import it before MODE 1 can run."
             )
+        if self.n <= 0.0:
+            raise ValueError(f"IEC60890Coefficients.n must be > 0; got {self.n}")
+        if self.d < 1.0:
+            raise ValueError(
+                f"IEC60890Coefficients.d must be >= 1 (the top of an enclosure cannot "
+                f"be cooler than its mid-height); got {self.d}"
+            )
+        if self.default_installation_factor < 0.0:
+            raise ValueError(
+                f"default_installation_factor must be >= 0; "
+                f"got {self.default_installation_factor}"
+            )
+        for key, value in self.installation_factors.items():
+            if value < 0.0:
+                raise ValueError(
+                    f"installation factor for {key!r} must be >= 0; got {value}"
+                )
+        previous = -1.0
+        for ratio, _ in self.height_distribution:
+            if not (0.0 <= ratio <= 1.0):
+                raise ValueError(
+                    f"height_distribution y/H must be in [0, 1]; got {ratio}"
+                )
+            if ratio <= previous:
+                raise ValueError("height_distribution must be sorted by ascending y/H")
+            previous = ratio
+
+    def installation_factor(self, orientation_key: str) -> float:
+        """Installation factor b_j for a surface orientation."""
+        return self.installation_factors.get(
+            orientation_key, self.default_installation_factor
+        )
+
+    def height_factor(self, height_ratio: float) -> float:
+        """
+        f(y/H) from §11.5, linearly interpolated.
+
+        Returns 1.0 (the mid-height value) when the dataset carries no profile.
+        """
+        points = self.height_distribution
+        if not points:
+            return 1.0
+        ratio = min(max(height_ratio, 0.0), 1.0)
+        if ratio <= points[0][0]:
+            return points[0][1]
+        if ratio >= points[-1][0]:
+            return points[-1][1]
+        for (x0, y0), (x1, y1) in itertools.pairwise(points):
+            if x0 <= ratio <= x1:
+                span = x1 - x0
+                if span == 0.0:
+                    return y0
+                return y0 + (ratio - x0) * (y1 - y0) / span
+        return points[-1][1]
+
+
+# ---------------------------------------------------------------------------
+# Temperature rise
+# ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class IEC60890Result:
-    """Result of an IEC TR 60890 temperature rise calculation."""
-    delta_t_k: float            # estimated temperature rise above ambient [K]
-    p_total_w: float            # total power loss used in calculation [W]
-    a_eff_m2: float             # effective ventilation area used [m²]
-    coefficients: IEC60890Coefficients  # coefficients used
+    """Result of an IEC TR 60890 temperature-rise calculation."""
+
+    delta_theta_mid_k: float  # Δθ at mid-height [K]
+    delta_theta_top_k: float  # Δθ at the top of the enclosure [K]
+    p_total_w: float  # total internal power loss used [W]
+    effective_cooling_area_m2: float  # A_e used [m²]
+    coefficients: IEC60890Coefficients
     warnings: tuple[str, ...]
+
+    def delta_theta_at_height_k(self, height_ratio: float) -> float:
+        """Δθ(y) = Δθ_mid · f(y/H) [K] — THERM-EQN-001 §11.5."""
+        return self.delta_theta_mid_k * self.coefficients.height_factor(height_ratio)
 
 
 def iec60890_temperature_rise(
     p_total_w: float,
-    a_eff_m2: float,
+    effective_cooling_area_m2: float,
     coefficients: IEC60890Coefficients,
 ) -> IEC60890Result:
     """
-    Calculate IEC TR 60890 empirical temperature rise above ambient.
+    Temperature rise above ambient by the IEC TR 60890 empirical method.
 
-    ΔT_e = b × P_total^c × (A_eff / A_ref)^d
-
-    CR-ENG-002: the coefficients (b, c, d, A_ref) must be loaded from
-    the licensed dataset — they are never hard-coded here.
+        Δθ_mid = c_0 · (P_tot / A_e)^n        [K]
+        Δθ_top = d · Δθ_mid                   [K]
 
     Parameters
     ----------
     p_total_w:
-        Total power loss in the enclosure [W].
-    a_eff_m2:
-        Effective ventilation area [m²].
+        Total internal power loss [W].
+    effective_cooling_area_m2:
+        Effective cooling surface A_e [m²], from `effective_cooling_area_m2`.
     coefficients:
-        Licensed empirical coefficients loaded from the dataset.
+        Licensed coefficients. See CR-ENG-002.
 
-    Returns
-    -------
-    IEC60890Result
-        Estimated temperature rise above ambient [K].
+    Raises
+    ------
+    ValueError
+        If A_e is not positive. An enclosure with no cooling surface has no
+        steady state, so returning a finite rise — least of all zero — would be
+        a dangerously wrong answer for a sealed box.
     """
     if p_total_w < 0:
         raise ValueError(f"p_total_w must be >= 0 W; got {p_total_w}")
-    if a_eff_m2 < 0:
-        raise ValueError(f"a_eff_m2 must be >= 0 m²; got {a_eff_m2}")
+    if effective_cooling_area_m2 <= 0:
+        raise ValueError(
+            f"effective_cooling_area_m2 must be > 0 m²; got {effective_cooling_area_m2}. "
+            "An enclosure with no effective cooling surface cannot reach a steady "
+            "state, so IEC TR 60890 does not apply to it."
+        )
 
     warns: list[str] = []
+    power_density = p_total_w / effective_cooling_area_m2
+    delta_mid = coefficients.c0 * float(power_density**coefficients.n)
+    delta_top = coefficients.d * delta_mid
 
-    if a_eff_m2 == 0.0:
+    if not coefficients.dataset_version:
         warns.append(
-            "IEC TR 60890: A_eff = 0 (no ventilation openings). "
-            "The empirical formula may not apply to sealed enclosures. "
-            "Verify applicability with the standard."
+            "The IEC TR 60890 coefficient dataset carries no version tag; the "
+            "calculation cannot be traced back to a specific licensed release "
+            "(M0-09)."
         )
-        # For a sealed enclosure, the formula still applies with A_eff/A_ref → 0
-        # but the result is non-physical.  Return 0 with a warning.
-        return IEC60890Result(
-            delta_t_k=0.0,
-            p_total_w=p_total_w,
-            a_eff_m2=a_eff_m2,
-            coefficients=coefficients,
-            warnings=tuple(warns),
-        )
-
-    area_ratio = a_eff_m2 / coefficients.a_ref_m2
-    delta_t = coefficients.b * (p_total_w ** coefficients.c) * (area_ratio ** coefficients.d)
 
     return IEC60890Result(
-        delta_t_k=delta_t,
+        delta_theta_mid_k=delta_mid,
+        delta_theta_top_k=delta_top,
         p_total_w=p_total_w,
-        a_eff_m2=a_eff_m2,
+        effective_cooling_area_m2=effective_cooling_area_m2,
         coefficients=coefficients,
         warnings=tuple(warns),
     )

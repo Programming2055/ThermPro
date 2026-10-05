@@ -26,7 +26,6 @@ from thermal_core.libraries import (
 from thermal_core.loss_models import (
     T_REF_K,
     _interpolate_loss_curve,
-    busbar_heat_source,
     busbar_heat_source_resolved,
     cable_heat_source,
     device_heat_source,
@@ -252,24 +251,6 @@ class TestDeviceHeatSource:
             device=dev, entity_id="e", location=_loc(), operating_current_a=0.0
         )
         assert hs1.source_id != hs2.source_id
-
-
-# ---------------------------------------------------------------------------
-# busbar_heat_source (stub)
-# ---------------------------------------------------------------------------
-
-
-class TestBusbarHeatSourceStub:
-    def test_raises_not_implemented(self) -> None:
-        profile = _make_busbar_profile()
-        with pytest.raises(NotImplementedError):
-            busbar_heat_source(
-                profile=profile,
-                entity_id="ent-bb",
-                location=_loc(),
-                length_m=1.0,
-                operating_current_a=500.0,
-            )
 
 
 # ---------------------------------------------------------------------------

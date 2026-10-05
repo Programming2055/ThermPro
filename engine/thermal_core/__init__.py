@@ -6,10 +6,35 @@ Milestone 2: Geometry domain types (geometry.py).
 Milestone 3: Engineering libraries and heat source model (libraries.py,
              heat_source.py, loss_models.py).
 Milestone 4: Thermal physics solver (snapshot.py, result.py, solver/, materials/,
-             conduction/, natural_convection/, radiation/, airflow/, benchmarks/).
+             conduction/, natural_convection/, radiation/, airflow/, benchmarks/),
+             the standards interpretation layer (compliance.py), the MODE 4 CFD
+             adapter (cfd_export.py) and the M0-03/M0-04 JSON contract
+             (contract.py) that makes CR-TECH-001 true in code.
 """
 __version__ = "0.4.0"
 
+from thermal_core.compliance import (
+    ComplianceCheck,
+    ComplianceReport,
+    ComplianceStatus,
+    DeratingRecommendation,
+    Hotspot,
+    HotspotSeverity,
+    LimitSet,
+    TemperatureLimit,
+    evaluate_compliance,
+    iec_61439_limit_set,
+)
+from thermal_core.contract import (
+    CONTRACT_SCHEMA_VERSION,
+    ENGINE_VERSION,
+    ContractError,
+    ContractInput,
+    JsonThermalSolver,
+    input_snapshot_from_json,
+    result_to_json,
+    solve_json,
+)
 from thermal_core.geometry import (
     COORDINATE_SYSTEM_VERSION,
     BoundingBox,
@@ -79,8 +104,10 @@ from thermal_core.snapshot import (
 from thermal_core.solver.iterative import ZonalSolver, solve
 
 __all__ = [
+    "CONTRACT_SCHEMA_VERSION",
     # geometry constants
     "COORDINATE_SYSTEM_VERSION",
+    "ENGINE_VERSION",
     "BoundaryConditions",
     "BoundingBox",
     "BusbarCoating",
@@ -93,11 +120,17 @@ __all__ = [
     "CompartmentResult",
     "CompartmentSnapshot",
     "CompartmentType",
+    "ComplianceCheck",
+    "ComplianceReport",
+    "ComplianceStatus",
     "ConnectionLibraryEntry",
     "ContactQuality",
+    "ContractError",
+    "ContractInput",
     "ConvergenceTrace",
     # geometry dataclasses
     "CoordinateSystem",
+    "DeratingRecommendation",
     "DeviceLibraryEntry",
     "Dimensions3D",
     "FanCurvePoint",
@@ -111,10 +144,14 @@ __all__ = [
     "HeatSourceEntityType",
     "HeatSourceGenerationType",
     "HeatSourceMap",
+    "Hotspot",
+    "HotspotSeverity",
     # solver inputs (M4)
     "InputSnapshot",
     "InstallationType",
     "InternalOpeningDirection",
+    "JsonThermalSolver",
+    "LimitSet",
     "LossBreakdown",
     "LossCalculationSource",
     # library types
@@ -140,10 +177,16 @@ __all__ = [
     "SurfaceLibraryEntry",
     "SurfaceOrientation",
     "SurfaceSnapshot",
+    "TemperatureLimit",
     "ValidationSeverity",
     "VentilationOpeningLibraryEntry",
     "VentilationRequirement",
     # solver (M4)
     "ZonalSolver",
+    "evaluate_compliance",
+    "iec_61439_limit_set",
+    "input_snapshot_from_json",
+    "result_to_json",
     "solve",
+    "solve_json",
 ]

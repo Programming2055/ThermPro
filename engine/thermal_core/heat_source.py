@@ -126,6 +126,30 @@ class HeatSource:
         None if not applicable.
     breakdown:
         Optional fine-grained loss sub-allocation.
+    name:
+        Human-readable label carried through to the result for the engineer.
+    compartment_id:
+        Compartment the entity sits in. The solver injects this source's power
+        into that compartment's air node.
+    temperature_coefficient_per_k:
+        α_T [1/K] for conductors whose resistance rises with temperature. When
+        set, the solver re-evaluates I²R at the conductor's own calculated
+        temperature instead of the reference value (CR-ENG-004). None for
+        sources whose loss is temperature-independent, e.g. a device loss read
+        off a manufacturer curve.
+    reference_temperature_k:
+        Temperature at which power_loss_w was evaluated [K]. Only meaningful
+        alongside temperature_coefficient_per_k.
+    characteristic_length_m:
+        Length scale for the entity's own convection correlation [m]. None
+        falls back to a cube root of the volume, or the compartment height.
+    emissivity:
+        Surface emissivity of the entity body, for radiation to the enclosure
+        interior. None disables the entity's radiative path.
+    temperature_limit_k:
+        Maximum permissible absolute temperature for this entity [K], from the
+        device library or the project limit set. Used for hotspot and
+        compliance evaluation; None means no limit is known.
     """
 
     source_id: str
@@ -143,6 +167,13 @@ class HeatSource:
     breakdown: LossBreakdown | None = None
     generation_type: HeatSourceGenerationType = HeatSourceGenerationType.POINT
     uncertainty_percent: float | None = None
+    name: str | None = None
+    compartment_id: str | None = None
+    temperature_coefficient_per_k: float | None = None
+    reference_temperature_k: float = 293.15
+    characteristic_length_m: float | None = None
+    emissivity: float | None = None
+    temperature_limit_k: float | None = None
 
     def __post_init__(self) -> None:
         if self.power_loss_w < 0:
@@ -156,6 +187,25 @@ class HeatSource:
         if self.surface_area_m2 is not None and self.surface_area_m2 <= 0:
             raise ValueError(
                 f"HeatSource.surface_area_m2 must be > 0 (m²); got {self.surface_area_m2}"
+            )
+        if self.characteristic_length_m is not None and self.characteristic_length_m <= 0:
+            raise ValueError(
+                f"HeatSource.characteristic_length_m must be > 0 (m); "
+                f"got {self.characteristic_length_m}"
+            )
+        if self.emissivity is not None and not (0.0 <= self.emissivity <= 1.0):
+            raise ValueError(
+                f"HeatSource.emissivity must be in [0, 1]; got {self.emissivity}"
+            )
+        if self.temperature_limit_k is not None and self.temperature_limit_k <= 0:
+            raise ValueError(
+                f"HeatSource.temperature_limit_k must be > 0 K (CR-ENG-003); "
+                f"got {self.temperature_limit_k}"
+            )
+        if self.reference_temperature_k <= 0:
+            raise ValueError(
+                f"HeatSource.reference_temperature_k must be > 0 K (CR-ENG-003); "
+                f"got {self.reference_temperature_k}"
             )
         if self.operating_current_a is not None and self.operating_current_a < 0:
             raise ValueError(
@@ -184,6 +234,39 @@ class HeatSource:
         if self.surface_area_m2 is None or self.surface_area_m2 == 0:
             return None
         return self.power_loss_w / self.surface_area_m2
+
+    def power_loss_at_temperature_w(self, temperature_k: float) -> float:
+        """
+        Power loss re-evaluated at the conductor's own temperature [W].
+
+        CR-ENG-004 requires busbar resistance to be evaluated at the
+        calculated conductor temperature rather than at the 20 °C library
+        reference. For a linear temperature coefficient,
+
+            R(T) = R(T_ref) · [1 + α_T · (T − T_ref)]
+
+        and since the current is fixed, P scales with R:
+
+            P(T) = P(T_ref) · [1 + α_T · (T − T_ref)]        [W]
+
+        Sources without a temperature coefficient (device losses taken from a
+        manufacturer curve, for instance) return their stated loss unchanged.
+
+        Both temperatures are absolute, in kelvin (CR-ENG-003); because the
+        coefficient multiplies a *difference*, kelvin and celsius differences
+        are numerically identical and the formula is unit-safe either way.
+        """
+        if temperature_k <= 0:
+            raise ValueError(
+                f"temperature_k must be > 0 K (CR-ENG-003); got {temperature_k}"
+            )
+        alpha = self.temperature_coefficient_per_k
+        if alpha is None:
+            return self.power_loss_w
+        factor = 1.0 + alpha * (temperature_k - self.reference_temperature_k)
+        # A conductor cannot dissipate negative power: clamp the linear model
+        # rather than returning a non-physical result at extreme extrapolation.
+        return max(self.power_loss_w * factor, 0.0)
 
 
 # ---------------------------------------------------------------------------

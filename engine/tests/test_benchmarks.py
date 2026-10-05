@@ -22,8 +22,9 @@ from thermal_core.benchmarks.analytical import (
 from thermal_core.benchmarks.iec60890 import (
     IEC60890Coefficients,
     check_iec60890_applicability,
-    effective_ventilation_area_m2,
+    effective_cooling_area_m2,
     iec60890_temperature_rise,
+    ventilation_opening_area_m2,
 )
 from thermal_core.radiation.gray_body import STEFAN_BOLTZMANN
 
@@ -133,6 +134,19 @@ class TestBM004CombinedLoss:
 class TestIEC60890Framework:
     """IEC TR 60890 empirical method — framework tests (no licensed data)."""
 
+    @staticmethod
+    def _coefficients(**overrides: object) -> IEC60890Coefficients:
+        """Synthetic, deliberately non-licensed coefficients for formula tests."""
+        kwargs: dict[str, object] = {
+            "c0": 1.0,
+            "n": 0.5,
+            "d": 1.2,
+            "installation_factors": {"VERTICAL": 0.9, "HORIZONTAL_UP": 1.4},
+            "dataset_version": "synthetic-test-only",
+        }
+        kwargs.update(overrides)
+        return IEC60890Coefficients(**kwargs)  # type: ignore[arg-type]
+
     def test_applicability_no_forced_ventilation(self) -> None:
         result = check_iec60890_applicability(
             has_forced_ventilation=False,
@@ -156,37 +170,103 @@ class TestIEC60890Framework:
         )
         assert not result.is_applicable
 
-    def test_effective_ventilation_area_geometric_mean(self) -> None:
-        A_eff = effective_ventilation_area_m2(0.04, 0.09)
-        expected = math.sqrt(0.04 * 0.09)
-        assert A_eff == pytest.approx(expected)
+    def test_tall_enclosure_outside_method_range(self) -> None:
+        """ASS-M1-003: the correlation was derived for enclosures up to 2 m."""
+        result = check_iec60890_applicability(
+            has_forced_ventilation=False,
+            has_busbars_with_unknown_losses=False,
+            enclosure_height_m=2.6,
+        )
+        assert not result.is_applicable
+        assert any("2 m" in r for r in result.reasons)
 
-    def test_effective_ventilation_area_zero_inlet(self) -> None:
-        A_eff = effective_ventilation_area_m2(0.0, 0.09)
-        assert A_eff == pytest.approx(0.0)
+    def test_effective_cooling_area_weights_by_installation_factor(self) -> None:
+        """THERM-EQN-001 §11.2: A_e = Σ b_j · A_j."""
+        a_e = effective_cooling_area_m2([(2.0, 0.9), (1.0, 1.4)])
+        assert a_e == pytest.approx(2.0 * 0.9 + 1.0 * 1.4)
+
+    def test_effective_cooling_area_of_nothing_is_zero(self) -> None:
+        assert effective_cooling_area_m2([]) == pytest.approx(0.0)
+
+    def test_ventilation_opening_area_geometric_mean(self) -> None:
+        a_vent = ventilation_opening_area_m2(0.04, 0.09)
+        assert a_vent == pytest.approx(math.sqrt(0.04 * 0.09))
+
+    def test_ventilation_opening_area_zero_inlet(self) -> None:
+        assert ventilation_opening_area_m2(0.0, 0.09) == pytest.approx(0.0)
 
     def test_zero_coefficient_rejected(self) -> None:
-        """CR-ENG-002: b=0 means dataset not loaded → must raise."""
+        """CR-ENG-002: c0 = 0 means the licensed dataset was never imported."""
         with pytest.raises(ValueError, match="licensed"):
-            IEC60890Coefficients(b=0.0, c=0.5, d=-0.5, a_ref_m2=1.0)
+            IEC60890Coefficients(c0=0.0, n=0.5, d=1.2)
 
-    def test_temperature_rise_calculation(self) -> None:
-        # Use synthetic (not licensed) coefficients for the formula test
-        coeffs = IEC60890Coefficients(b=1.0, c=0.5, d=-0.5, a_ref_m2=1.0)
-        result = iec60890_temperature_rise(1000.0, 1.0, coeffs)
-        # ΔT = 1.0 × 1000^0.5 × (1/1)^-0.5 = sqrt(1000) ≈ 31.62
-        assert result.delta_t_k == pytest.approx(math.sqrt(1000.0), rel=1e-6)
+    def test_top_factor_below_one_rejected(self) -> None:
+        """The top of an enclosure is never cooler than its mid-height."""
+        with pytest.raises(ValueError, match="d must be >= 1"):
+            IEC60890Coefficients(c0=1.0, n=0.5, d=0.8)
 
-    def test_zero_effective_area_returns_with_warning(self) -> None:
-        coeffs = IEC60890Coefficients(b=1.0, c=0.5, d=-0.5, a_ref_m2=1.0)
-        result = iec60890_temperature_rise(1000.0, 0.0, coeffs)
-        assert result.delta_t_k == pytest.approx(0.0)
-        assert len(result.warnings) > 0
+    def test_mid_height_temperature_rise(self) -> None:
+        """Δθ_mid = c_0 · (P_tot / A_e)^n — THERM-EQN-001 §11.3."""
+        result = iec60890_temperature_rise(1000.0, 1.0, self._coefficients())
+        assert result.delta_theta_mid_k == pytest.approx(math.sqrt(1000.0), rel=1e-9)
+
+    def test_top_rise_applies_distribution_factor(self) -> None:
+        """Δθ_top = d · Δθ_mid — THERM-EQN-001 §11.4."""
+        result = iec60890_temperature_rise(1000.0, 1.0, self._coefficients(d=1.3))
+        assert result.delta_theta_top_k == pytest.approx(
+            1.3 * result.delta_theta_mid_k, rel=1e-9
+        )
+
+    def test_rise_scales_with_power_density_not_power_alone(self) -> None:
+        """Doubling A_e at fixed power must reduce the rise."""
+        coeffs = self._coefficients()
+        small_area = iec60890_temperature_rise(1000.0, 1.0, coeffs)
+        large_area = iec60890_temperature_rise(1000.0, 2.0, coeffs)
+        assert large_area.delta_theta_mid_k < small_area.delta_theta_mid_k
+
+    def test_sealed_enclosure_is_rejected_not_reported_as_zero_rise(self) -> None:
+        """
+        A_e = 0 must raise.
+
+        Returning a zero rise for an enclosure with no cooling surface would
+        report the single most dangerous configuration as the safest one.
+        """
+        with pytest.raises(ValueError, match="cannot reach a steady state"):
+            iec60890_temperature_rise(1000.0, 0.0, self._coefficients())
 
     def test_negative_power_rejected(self) -> None:
-        coeffs = IEC60890Coefficients(b=1.0, c=0.5, d=-0.5, a_ref_m2=1.0)
         with pytest.raises(ValueError, match="p_total_w"):
-            iec60890_temperature_rise(-100.0, 1.0, coeffs)
+            iec60890_temperature_rise(-100.0, 1.0, self._coefficients())
+
+    def test_untagged_dataset_warns(self) -> None:
+        """M0-09: a result must be traceable to a licensed dataset release."""
+        result = iec60890_temperature_rise(
+            500.0, 2.0, self._coefficients(dataset_version="")
+        )
+        assert any("version tag" in w for w in result.warnings)
+
+    def test_height_profile_interpolates(self) -> None:
+        """Δθ(y) = Δθ_mid · f(y/H) — THERM-EQN-001 §11.5."""
+        coeffs = self._coefficients(
+            height_distribution=((0.0, 0.5), (0.5, 1.0), (1.0, 1.4))
+        )
+        result = iec60890_temperature_rise(1000.0, 1.0, coeffs)
+        mid = result.delta_theta_mid_k
+        assert result.delta_theta_at_height_k(0.0) == pytest.approx(0.5 * mid)
+        assert result.delta_theta_at_height_k(0.5) == pytest.approx(1.0 * mid)
+        assert result.delta_theta_at_height_k(0.25) == pytest.approx(0.75 * mid)
+        assert result.delta_theta_at_height_k(1.0) == pytest.approx(1.4 * mid)
+
+    def test_height_profile_absent_returns_mid_height(self) -> None:
+        result = iec60890_temperature_rise(1000.0, 1.0, self._coefficients())
+        assert result.delta_theta_at_height_k(0.9) == pytest.approx(
+            result.delta_theta_mid_k
+        )
+
+    def test_installation_factor_falls_back_to_default(self) -> None:
+        coeffs = self._coefficients(default_installation_factor=0.6)
+        assert coeffs.installation_factor("VERTICAL") == pytest.approx(0.9)
+        assert coeffs.installation_factor("HORIZONTAL_DOWN") == pytest.approx(0.6)
 
 
 class TestBenchmarkResult:

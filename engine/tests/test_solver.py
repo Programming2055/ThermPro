@@ -32,6 +32,7 @@ from thermal_core.snapshot import (
     SurfaceOrientation,
     SurfaceSnapshot,
 )
+from thermal_core.solver.iterative import air_node as air_node_id
 from thermal_core.solver.iterative import solve
 
 # ---------------------------------------------------------------------------
@@ -245,7 +246,7 @@ class TestZonalSolverWithHeat:
     def test_node_by_id_air(self) -> None:
         snap = _make_enclosure_snapshot(q_heat_source_w=500.0)
         result = solve(snap)
-        air_node = result.node_by_id("air_c1")
+        air_node = result.node_by_id(air_node_id("c1"))
         assert air_node is not None
 
 

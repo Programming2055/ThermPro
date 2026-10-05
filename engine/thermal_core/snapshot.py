@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from thermal_core.benchmarks.iec60890 import IEC60890Coefficients
 from thermal_core.heat_source import HeatSourceMap
 
 # ---------------------------------------------------------------------------
@@ -67,6 +68,17 @@ class SurfaceSnapshot:
     thickness_m: float           # wall/partition thickness [m]; 0 = thin partition
     thermal_conductivity_w_per_m_k: float  # wall material k [W/(m·K)]
     is_external: bool            # True → exterior surface; external convection applies
+    # For an internal partition, the compartment on the far side. None means the
+    # partition faces no modelled compartment, in which case it is adiabatic and
+    # carries no heat in steady state.
+    adjacent_compartment_id: str | None = None
+    # Emissivity of the interior face, if it differs from `emissivity` (which
+    # describes the face that radiates to the surroundings).
+    internal_emissivity: float | None = None
+    # True when the surface is listed in the enclosure's `restricted_surfaces`
+    # (wall-mounted, abutting another cubicle). Such a surface exchanges no heat
+    # with the surroundings, the conservative treatment required by M0-06.
+    is_restricted: bool = False
 
     def __post_init__(self) -> None:
         if self.area_m2 <= 0:
@@ -79,6 +91,16 @@ class SurfaceSnapshot:
             raise ValueError(
                 f"SurfaceSnapshot.thermal_conductivity_w_per_m_k must be > 0; "
                 f"got {self.thermal_conductivity_w_per_m_k}"
+            )
+        if self.internal_emissivity is not None and not (0.0 <= self.internal_emissivity <= 1.0):
+            raise ValueError(
+                f"SurfaceSnapshot.internal_emissivity must be in [0, 1]; "
+                f"got {self.internal_emissivity}"
+            )
+        if self.is_external and self.adjacent_compartment_id is not None:
+            raise ValueError(
+                f"SurfaceSnapshot {self.surface_id!r} is external and therefore cannot "
+                f"also border compartment {self.adjacent_compartment_id!r}"
             )
 
 
@@ -249,7 +271,11 @@ class SolverSettings:
     enable_radiation: bool = True
     enable_natural_convection: bool = True
     enable_forced_convection: bool = True
+    enable_ventilation: bool = True             # buoyancy / fan air transport
     t_ref_k: float = 293.15                     # reference temperature for material props
+    # THERM-NET-001 §12: stop early rather than grind to max_iterations when the
+    # residual grows for this many consecutive iterations.
+    divergence_patience: int = 5
 
     def __post_init__(self) -> None:
         if self.max_iterations < 1:
@@ -289,6 +315,10 @@ class InputSnapshot:
     heat_source_map: HeatSourceMap       # from M3
     boundary_conditions: BoundaryConditions
     solver_settings: SolverSettings
+    # MODE_1 only. CR-ENG-002: the IEC TR 60890 coefficient tables are licensed
+    # and never shipped in this repository, so they arrive here from the
+    # administrator-imported dataset. None means MODE_1 cannot run.
+    iec60890_coefficients: IEC60890Coefficients | None = None
 
     def __post_init__(self) -> None:
         if not self.schema_version:

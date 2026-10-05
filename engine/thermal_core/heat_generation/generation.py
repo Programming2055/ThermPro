@@ -21,10 +21,19 @@ def heat_sources_in_compartment(
     """
     Filter HeatSource objects that belong to the given compartment.
 
-    Matching is by source_id against compartment.heat_source_ids.
+    A source that names its compartment directly wins; otherwise the
+    compartment's own `heat_source_ids` list is consulted. The back-reference
+    is preferred because `HeatSource.source_id` is generated inside the loss
+    models, so a caller assembling a CompartmentSnapshot cannot know it in
+    advance.
     """
     ids = set(compartment.heat_source_ids)
-    return [s for s in heat_source_map.sources if s.source_id in ids]
+    return [
+        s
+        for s in heat_source_map.sources
+        if s.compartment_id == compartment.compartment_id
+        or (s.compartment_id is None and s.source_id in ids)
+    ]
 
 
 def compartment_heat_generation_w(
