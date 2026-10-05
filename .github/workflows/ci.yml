@@ -191,10 +191,14 @@ jobs:
       - name: Run unit tests — thermpro_units (UT-UNITS-001 through UT-UNITS-010)
         run: pytest packages/units/tests/ -v -m units
 
-      - name: Run unit tests — thermal_core domain types
+      # CR-TECH-003 / DR-010: the periodic physics benchmarks are a
+      # pre-release verification, not an every-push gate. Deselecting them
+      # here states that in the configuration rather than relying on none
+      # being written yet.
+      - name: Run unit tests — thermal_core
         run: |
           cd engine
-          pytest tests/ -v
+          pytest tests/ -v -m "not periodic_physics"
 
       - name: Run unit tests — thermpro_schemas validator
         run: pytest packages/schemas/tests/ -v

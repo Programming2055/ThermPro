@@ -7,10 +7,41 @@ and produce auditable calculation reports.
 
 ## Status
 
-**Pre-implementation — Engineering Design Phase.**
+**Milestone 4 — the solver runs end to end.** Submit an M0-03 InputSnapshot,
+execute it, and get an M0-04 ResultSnapshot back with temperatures,
+IEC 61439 compliance checks, hotspots and derating advice.
 
-All twelve engineering and architecture documents in `docs/` must be reviewed and
-approved by a qualified engineer before any production code is written.
+Two things deliberately do not work:
+
+- **MODE 1 needs a licensed dataset.** The IEC TR 60890 coefficient tables are
+  licensed and are never committed here (CR-ENG-002). A MODE 1 run fails with
+  that reason until an administrator imports them through
+  `/api/v1/iec60890-datasets`; the empty import template is the only IEC TR
+  60890 artefact this repository ships.
+- **BM-007 (De Vahl Davis cavity) is outstanding.** The zonal network carries
+  one air node per compartment and cannot resolve a cavity boundary layer, so
+  the benchmark is skipped with that reason rather than approximated.
+
+## Quick start
+
+```bash
+pip install -e packages/units/ -e packages/schemas/ -e engine/ -e "apps/api/[dev]"
+```
+
+```python
+from thermal_core.contract import solve_json
+from thermal_core.reference_model import m003_document
+
+result = solve_json(m003_document("MODE_2"))      # M0-03 in, M0-04 out
+print(result["status"], result["compliance"]["overall_compliant"])
+```
+
+The engine is a pure function from one versioned JSON document to another
+(CR-TECH-001): no database, no HTTP framework, no library lookups. Everything
+the physics needs is inlined on the InputSnapshot, resolved at the API
+boundary before the engine is called.
+
+See [CLAUDE.md](CLAUDE.md) for the full command set and the milestone status.
 
 ## Documents
 
@@ -36,14 +67,17 @@ approved by a qualified engineer before any production code is written.
 | MODE 1 | IEC TR 60890 | Eligible natural-ventilation / closed enclosures |
 | MODE 2 | Nodal Thermal Network | Position-sensitive distributed analysis |
 | MODE 3 | Forced-Ventilation Airflow Network | Fan, grille, duct, filter systems |
-| MODE 4 | CFD Export/Import Adapter | Future OpenFOAM or equivalent integration |
+| MODE 4 | CFD Export/Import Adapter | Export to an external CFD package and import the field back |
 
-## Technology Stack (Planned)
+## Technology Stack
 
-- **Frontend:** React 18 · TypeScript · Vite · Zustand · Konva.js · Three.js · ECharts
-- **Backend:** Python 3.12 · FastAPI · Pydantic · NumPy · SciPy · SQLAlchemy · PostgreSQL
-- **Queue:** Celery · Redis
-- **Reports:** WeasyPrint (PDF) · openpyxl (XLSX)
+- **Frontend:** React 18 · TypeScript 5 · Vite · Zustand · Vitest
+- **Backend:** Python 3.12 · FastAPI · Pydantic · SQLAlchemy 2 (async) · Alembic · PostgreSQL
+- **Engine:** pure Python, no numerical dependencies. The models are tens of
+  nodes, and CR-TECH-001 asks for an engine that depends on nothing, so the
+  linear solve is dense Gaussian elimination with partial pivoting rather
+  than NumPy.
+- **Planned:** Celery · Redis for long studies; WeasyPrint and openpyxl for reports.
 
 ## Standards Referenced
 

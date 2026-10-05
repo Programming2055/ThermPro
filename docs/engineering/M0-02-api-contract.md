@@ -238,14 +238,55 @@ data: {"status": "CONVERGED", "run_id": "uuid"}
 
 ### 3.6 Results
 
+**As built (M4).** The result is served as one document rather than as six
+projections of it:
+
 | Method | Path | Description | Response |
 |--------|------|-------------|----------|
-| `GET` | `/calculations/{run_id}/result` | Full result snapshot | `ResultSnapshot` |
+| `POST` | `/calculation-runs/{run_id}/execute` | Run the engine against a submitted snapshot | `CalculationRun` |
+| `GET` | `/calculation-runs/{run_id}/result` | The stored M0-04 document, verbatim | `ResultSnapshot` |
+| `GET` | `/calculation-runs/{run_id}/input` | The immutable M0-03 document | `InputSnapshot` |
+| `GET` | `/calculation-runs/{run_id}/cfd-export` | MODE 4 export package | `CfdExportPackage` |
+
+The M0-04 document already carries `temperatures`, `hotspots`, `derating`,
+`compliance` and `solver_summary.convergence_trace` as named sections, so the
+per-section endpoints below were not built: they would return slices of a
+document the client already has, and each slice would need its own content
+hash to stay auditable. They remain available to add if a client needs them.
+
+| Method | Path | Description | Response |
+|--------|------|-------------|----------|
 | `GET` | `/calculations/{run_id}/result/temperatures` | Temperature field only | `TemperatureField` |
 | `GET` | `/calculations/{run_id}/result/hotspots` | Hotspot list | `HotspotList` |
 | `GET` | `/calculations/{run_id}/result/derating` | Derating recommendations | `DeratingReport` |
 | `GET` | `/calculations/{run_id}/result/compliance` | Compliance check | `ComplianceReport` |
 | `GET` | `/calculations/{run_id}/result/convergence` | Convergence trace | `ConvergenceTrace` |
+
+**Response headers.** `GET …/result` carries `X-Result-Checksum-SHA256` and
+`GET …/input` carries `X-Input-Checksum-SHA256`, so a caller can verify that
+the document it received is the one that was stored.
+
+**Status semantics.** A run reaches `COMPLETED` whether or not the solver
+converged; `result.status` carries that distinction, and CR-ENG-005 requires
+a `NON_CONVERGED` result to be shown with the RESULT INVALID treatment. A run
+is `FAILED` only when no temperature field was produced at all.
+
+---
+
+### 3.6a IEC TR 60890 coefficient datasets (Admin)
+
+CR-ENG-002: the coefficients are licensed and are never shipped. MODE 1 fails
+until an administrator imports them.
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| `GET` | `/iec60890-datasets/template` | The empty import template | Any |
+| `GET` | `/iec60890-datasets` | Imported datasets (metadata only) | Any |
+| `POST` | `/iec60890-datasets` | Import a dataset and activate it | Admin |
+| `POST` | `/iec60890-datasets/{id}/activate` | Make an imported dataset active | Admin |
+
+The coefficients are never returned by any endpoint. A dataset is immutable
+once imported (CR-ENG-012); a correction is a new version.
 
 **ComplianceReport response:**
 ```json

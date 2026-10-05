@@ -1,0 +1,42 @@
+# Periodic physics verification — CR-TECH-003 / DR-010.
+#
+# These benchmarks check the physics against published reference solutions.
+# They are slow, and a failure means the model is wrong rather than that a
+# commit broke something, so they are not an every-push gate: they run
+# weekly and before a release, where an engineer can look at the result.
+name: Periodic physics verification
+
+on:
+  schedule:
+    # Mondays, 03:17 UTC. Off the hour so the run is not queued behind
+    # everything else that fires at :00.
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  periodic-physics:
+    name: Periodic physics benchmarks
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install packages
+        run: |
+          pip install -e packages/units/
+          pip install -e packages/schemas/
+          pip install -e engine/
+          pip install pytest
+
+      - name: Run periodic physics benchmarks
+        working-directory: engine
+        # --no-header keeps the log readable; an empty selection is not a
+        # failure, because the suite is allowed to grow one benchmark at a
+        # time (BM-007 is still outstanding — see M0-05 §3).
+        run: pytest tests/ -v -m periodic_physics --no-header
