@@ -92,8 +92,8 @@ for this purpose.
 **Status:** ✅ APPROVED (DR-005, 2026-07-03)
 
 **Decision summary:** Five fan operating states replace the previous binary `operating`
-flag: FORWARD_OPERATING, STOPPED_FREE_FLOW, STOPPED_WITH_DAMPER, FAILED_OPEN,
-FAILED_BLOCKED, ESTIMATED_REVERSE_FLOW.
+flag: RUNNING_FORWARD, STOPPED_FREE_FLOW, STOPPED_WITH_DAMPER, FAILED_OPEN,
+FAILED_BLOCKED, REVERSE_FLOW_ESTIMATED.
 
 Reverse flow must not be clamped to zero unless a non-return damper is present.
 Normal fan P-Q curve must not be extrapolated beyond validated bounds.

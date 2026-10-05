@@ -7,22 +7,22 @@ top-level namespace without depending on thermpro-engine directly.
 """
 from thermal_core.domain_types import (
     CalculationMode,
-    StandardProfile,
+    CalculationRunStatus,
+    ContactResistanceSource,
     FanOperatingState,
     JointCondition,
-    ContactResistanceSource,
     KAcSource,
     LibraryStatus,
-    CalculationRunStatus,
+    StandardProfile,
 )
 
 __all__ = [
     "CalculationMode",
-    "StandardProfile",
+    "CalculationRunStatus",
+    "ContactResistanceSource",
     "FanOperatingState",
     "JointCondition",
-    "ContactResistanceSource",
     "KAcSource",
     "LibraryStatus",
-    "CalculationRunStatus",
+    "StandardProfile",
 ]

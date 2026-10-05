@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { calculationRunsApi } from "@/api/client";
 import type { CalculationRun } from "@/types/api";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -28,8 +29,8 @@ export function CalculationRunsPage() {
         <h1 className={styles.heading}>Calculation Runs</h1>
       </div>
       <p className={styles.sub}>
-        Immutable calculation snapshots. M1 submissions return{" "}
-        <code className={styles.code}>ENGINE_NOT_IMPLEMENTED</code> — no thermal solver has run.
+        Immutable calculation snapshots. A run is stored when it is submitted and
+        solved when it is executed; the stored result is the calculation record.
       </p>
 
       {loading && <p className={styles.message}>Loading…</p>}
@@ -45,6 +46,7 @@ export function CalculationRunsPage() {
               <th>ID</th>
               <th>Status</th>
               <th>Mode</th>
+              <th>Result</th>
               <th>Input Checksum</th>
               <th>Submitted</th>
             </tr>
@@ -53,15 +55,24 @@ export function CalculationRunsPage() {
             {runs.map((run) => (
               <tr key={run.id}>
                 <td>
-                  <code className={styles.hash} title={run.id}>
-                    {run.id.slice(0, 8)}…
-                  </code>
+                  <Link to={`/calculation-runs/${run.id}`}>
+                    <code className={styles.hash} title={run.id}>
+                      {run.id.slice(0, 8)}…
+                    </code>
+                  </Link>
                 </td>
                 <td>
                   <StatusBadge status={run.status} />
                 </td>
                 <td>
                   <code className={styles.code}>{run.mode ?? "—"}</code>
+                </td>
+                <td>
+                  {run.has_result ? (
+                    <Link to={`/calculation-runs/${run.id}`}>View result</Link>
+                  ) : (
+                    "—"
+                  )}
                 </td>
                 <td>
                   <code className={styles.hash} title={run.input_checksum_sha256}>

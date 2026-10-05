@@ -12,7 +12,6 @@ Covers:
 - COORDINATE_SYSTEM_VERSION type check
 """
 import pytest
-
 from thermal_core.geometry import (
     COORDINATE_SYSTEM_VERSION,
     BoundingBox,
@@ -28,7 +27,6 @@ from thermal_core.geometry import (
     SurfaceFace,
     ValidationSeverity,
 )
-
 
 # ---------------------------------------------------------------------------
 # Point3D

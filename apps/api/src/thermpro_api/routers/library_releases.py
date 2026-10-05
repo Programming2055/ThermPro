@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated, Any, Generic, TypeVar
+from datetime import datetime
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -16,10 +17,9 @@ from thermpro_api.services.library import LibraryImmutabilityError, LibraryServi
 
 router = APIRouter(prefix="/library-releases", tags=["library-releases"])
 
-T = TypeVar("T")
 
 
-class PaginatedResponse(BaseModel, Generic[T]):
+class PaginatedResponse[T](BaseModel):
     items: list[T]
     total: int
     page: int
@@ -40,7 +40,7 @@ class LibraryReleaseResponse(BaseModel):
     status: str
     content_hash_sha256: str
     description: str | None
-    created_at: str | None = None
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

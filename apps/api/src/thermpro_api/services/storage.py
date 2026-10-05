@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import abc
+import contextlib
 import io
 from typing import Any
 
 import boto3
 import botocore.exceptions
-
 from thermpro_api.settings import get_settings
 
 
@@ -74,15 +74,14 @@ class MinIOStorage(ObjectStorage):
 
     def get_object(self, key: str) -> bytes:
         response = self._client.get_object(Bucket=self._bucket, Key=key)
-        return response["Body"].read()  # type: ignore[no-any-return]
+        return response["Body"].read()
 
     def delete_object(self, key: str) -> None:
-        import contextlib
         with contextlib.suppress(botocore.exceptions.ClientError):
             self._client.delete_object(Bucket=self._bucket, Key=key)
 
     def get_presigned_url(self, key: str, expires_in_seconds: int = 3600) -> str:
-        return self._client.generate_presigned_url(  # type: ignore[no-any-return]
+        return self._client.generate_presigned_url(
             "get_object",
             Params={"Bucket": self._bucket, "Key": key},
             ExpiresIn=expires_in_seconds,

@@ -1,14 +1,40 @@
 """
-thermpro_engine -- Numerical thermal engine placeholder.
+thermpro_engine -- Numerical thermal engine.
 
-Milestone 1: Domain types and interfaces only.
-No thermal physics has been implemented.
-All calculation submissions return ENGINE_NOT_IMPLEMENTED.
-
-Milestone 2: Geometry domain types added (geometry.py).
+Milestone 1: Domain types and interfaces.
+Milestone 2: Geometry domain types (geometry.py).
+Milestone 3: Engineering libraries and heat source model (libraries.py,
+             heat_source.py, loss_models.py).
+Milestone 4: Thermal physics solver (snapshot.py, result.py, solver/, materials/,
+             conduction/, natural_convection/, radiation/, airflow/, benchmarks/),
+             the standards interpretation layer (compliance.py), the MODE 4 CFD
+             adapter (cfd_export.py) and the M0-03/M0-04 JSON contract
+             (contract.py) that makes CR-TECH-001 true in code.
 """
-__version__ = "0.1.0"
+__version__ = "0.4.0"
 
+from thermal_core.compliance import (
+    ComplianceCheck,
+    ComplianceReport,
+    ComplianceStatus,
+    DeratingRecommendation,
+    Hotspot,
+    HotspotSeverity,
+    LimitSet,
+    TemperatureLimit,
+    evaluate_compliance,
+    iec_61439_limit_set,
+)
+from thermal_core.contract import (
+    CONTRACT_SCHEMA_VERSION,
+    ENGINE_VERSION,
+    ContractError,
+    ContractInput,
+    JsonThermalSolver,
+    input_snapshot_from_json,
+    result_to_json,
+    solve_json,
+)
 from thermal_core.geometry import (
     COORDINATE_SYSTEM_VERSION,
     BoundingBox,
@@ -24,22 +50,143 @@ from thermal_core.geometry import (
     SurfaceFace,
     ValidationSeverity,
 )
+from thermal_core.heat_source import (
+    HeatSource,
+    HeatSourceEntityType,
+    HeatSourceGenerationType,
+    HeatSourceMap,
+    LossBreakdown,
+    LossCalculationSource,
+)
+from thermal_core.libraries import (
+    BusbarCoating,
+    BusbarProfile,
+    BusbarProfileLibraryEntry,
+    CableConductor,
+    CableInsulation,
+    CableLibraryEntry,
+    ConnectionLibraryEntry,
+    ContactQuality,
+    DeviceLibraryEntry,
+    FanCurvePoint,
+    FanDirection,
+    FanLibraryEntry,
+    FilterLibraryEntry,
+    LossConfidence,
+    LossCurvePoint,
+    MaterialCategory,
+    MaterialLibraryEntry,
+    MountingType,
+    OpeningAccessory,
+    SurfaceLibraryEntry,
+    VentilationOpeningLibraryEntry,
+    VentilationRequirement,
+)
+from thermal_core.result import (
+    CompartmentResult,
+    ConvergenceTrace,
+    NodeTemperature,
+    ResultSnapshot,
+    SolverStatus,
+    SolverWarning,
+)
+from thermal_core.snapshot import (
+    BoundaryConditions,
+    CalculationMode,
+    CompartmentSnapshot,
+    GeometrySnapshot,
+    InputSnapshot,
+    OpeningSnapshot,
+    SolverSettings,
+    SurfaceOrientation,
+    SurfaceSnapshot,
+)
+from thermal_core.solver.iterative import ZonalSolver, solve
 
 __all__ = [
+    "CONTRACT_SCHEMA_VERSION",
     # geometry constants
     "COORDINATE_SYSTEM_VERSION",
+    "ENGINE_VERSION",
+    "BoundaryConditions",
+    "BoundingBox",
+    "BusbarCoating",
+    "BusbarProfile",
+    "BusbarProfileLibraryEntry",
+    "CableConductor",
+    "CableInsulation",
+    "CableLibraryEntry",
+    "CalculationMode",
+    "CompartmentResult",
+    "CompartmentSnapshot",
+    "CompartmentType",
+    "ComplianceCheck",
+    "ComplianceReport",
+    "ComplianceStatus",
+    "ConnectionLibraryEntry",
+    "ContactQuality",
+    "ContractError",
+    "ContractInput",
+    "ConvergenceTrace",
     # geometry dataclasses
     "CoordinateSystem",
-    "Point3D",
+    "DeratingRecommendation",
+    "DeviceLibraryEntry",
     "Dimensions3D",
-    "BoundingBox",
+    "FanCurvePoint",
+    "FanDirection",
+    "FanLibraryEntry",
+    "FilterLibraryEntry",
+    "GeometrySnapshot",
     "GeometryValidationIssue",
+    # heat source (M3)
+    "HeatSource",
+    "HeatSourceEntityType",
+    "HeatSourceGenerationType",
+    "HeatSourceMap",
+    "Hotspot",
+    "HotspotSeverity",
+    # solver inputs (M4)
+    "InputSnapshot",
+    "InstallationType",
+    "InternalOpeningDirection",
+    "JsonThermalSolver",
+    "LimitSet",
+    "LossBreakdown",
+    "LossCalculationSource",
+    # library types
+    "LossConfidence",
+    "LossCurvePoint",
+    "MaterialCategory",
+    # library entries
+    "MaterialLibraryEntry",
+    "MountingType",
+    "NodeTemperature",
+    "OpeningAccessory",
+    "OpeningDirection",
+    "OpeningSnapshot",
+    "PartitionOrientation",
+    "Point3D",
+    # solver results (M4)
+    "ResultSnapshot",
+    "SolverSettings",
+    "SolverStatus",
+    "SolverWarning",
     # geometry enums
     "SurfaceFace",
-    "CompartmentType",
-    "PartitionOrientation",
-    "OpeningDirection",
-    "InternalOpeningDirection",
+    "SurfaceLibraryEntry",
+    "SurfaceOrientation",
+    "SurfaceSnapshot",
+    "TemperatureLimit",
     "ValidationSeverity",
-    "InstallationType",
+    "VentilationOpeningLibraryEntry",
+    "VentilationRequirement",
+    # solver (M4)
+    "ZonalSolver",
+    "evaluate_compliance",
+    "iec_61439_limit_set",
+    "input_snapshot_from_json",
+    "result_to_json",
+    "solve",
+    "solve_json",
 ]

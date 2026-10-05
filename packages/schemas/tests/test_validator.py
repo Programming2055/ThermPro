@@ -7,7 +7,6 @@ and rejects malformed, incomplete, or out-of-scope inputs.
 import pytest
 from thermpro_schemas import SchemaValidationError, validate_input_snapshot
 
-
 # ---------------------------------------------------------------------------
 # Minimal valid InputSnapshot fixture
 # ---------------------------------------------------------------------------

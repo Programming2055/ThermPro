@@ -118,8 +118,8 @@ export interface Project {
 
 export interface CreateProjectRequest {
   name: string;
-  description?: string;
-  standard_profile?: StandardProfile;
+  description?: string | undefined;
+  standard_profile?: StandardProfile | undefined;
 }
 
 // ─── Library releases ────────────────────────────────────────────────────────
@@ -160,7 +160,170 @@ export interface CalculationRun {
   input_checksum_sha256: string;
   rejection_reason: string | null;
   submitted_at: string;
+  started_at: string | null;
   completed_at: string | null;
+  engine_version: string | null;
+  result_checksum_sha256: string | null;
+  /** True once a ResultSnapshot is stored and can be fetched. */
+  has_result: boolean;
+}
+
+// ─── ResultSnapshot — M0-04 ──────────────────────────────────────────────────
+
+/**
+ * The statuses the engine itself reports, which are not the run's statuses:
+ * a run reaches COMPLETED whether the solver converged or not, and this is
+ * what says which happened. CR-ENG-005 turns NON_CONVERGED into the
+ * "RESULT INVALID" watermark.
+ */
+export type SolverStatus =
+  | "CONVERGED"
+  | "NON_CONVERGED"
+  | "FAILED"
+  | "CANCELLED";
+
+export type ResultEntityType =
+  | "DEVICE"
+  | "BUSBAR_SEGMENT"
+  | "BUSBAR_JOINT"
+  | "CONDUCTOR"
+  | "SURFACE"
+  | "FAN";
+
+export type HotspotSeverity = "CRITICAL" | "WARNING" | "OK";
+
+export type ComplianceStatus = "PASS" | "FAIL" | "NOT_APPLICABLE";
+
+export interface ConvergenceIteration {
+  iteration: number;
+  max_delta_T_K: number;
+  inner_iterations: number;
+  energy_imbalance_W: number;
+  mass_imbalance_fraction: number | null;
+}
+
+export interface SolverSummary {
+  outer_iterations_used: number;
+  inner_iterations_total: number;
+  wall_clock_s: number;
+  final_max_delta_T_K: number;
+  final_energy_imbalance_fraction: number;
+  final_mass_imbalance_fraction: number | null;
+  convergence_trace?: ConvergenceIteration[];
+}
+
+export interface EntityTemperature {
+  entity_id: string;
+  entity_type: ResultEntityType;
+  name: string | null;
+  temperature_K: number;
+  temperature_C?: number;
+  temperature_rise_K: number;
+  power_loss_W?: number | null;
+}
+
+export interface CellTemperature {
+  cell_id: string;
+  compartment_id: string;
+  centre_x_m: number;
+  centre_y_m: number;
+  centre_z_m: number;
+  temperature_K: number;
+}
+
+export interface Hotspot {
+  entity_id: string;
+  entity_type: string;
+  name: string | null;
+  temperature_K: number;
+  temperature_rise_K: number;
+  limit_K: number;
+  excess_K: number;
+  severity: HotspotSeverity;
+}
+
+export interface DeratingRecommendation {
+  entity_id: string;
+  entity_type: string;
+  name: string | null;
+  current_loading_factor: number;
+  recommended_loading_factor: number;
+  margin_K: number;
+  action_required: boolean;
+}
+
+export interface ComplianceCheck {
+  check_id: string;
+  entity_id: string;
+  entity_type: string;
+  name: string | null;
+  standard: string;
+  clause: string;
+  limit_K: number;
+  actual_rise_K: number;
+  margin_K: number;
+  status: ComplianceStatus;
+  note: string | null;
+}
+
+export interface OpeningFlow {
+  opening_id: string;
+  flow_rate_m3s: number;
+  direction: "IN" | "OUT";
+}
+
+export interface AirflowResult {
+  total_flow_rate_m3s: number;
+  fan_operating_points: Array<{
+    fan_id: string;
+    flow_rate_m3s: number;
+    static_pressure_Pa: number;
+  }>;
+  opening_flows: OpeningFlow[];
+  buoyancy_stack_pressure_Pa: number | null;
+}
+
+/** DR-003: non-suppressible, because a hidden K_AC warning is no warning. */
+export interface KAcWarning {
+  segment_id: string;
+  warning_code: "K_AC_UNITY_FALLBACK";
+  message: string;
+}
+
+export interface Mode1Result {
+  P_total_W: number;
+  delta_theta_i_K: number;
+  delta_theta_e_K: number;
+  delta_theta_total_K: number;
+  coefficient_c: number;
+  effective_cooling_area_m2: number;
+}
+
+/** The M0-04 ResultSnapshot, exactly as the engine produced it. */
+export interface ResultSnapshot {
+  schema_version: string;
+  run_id: string;
+  mode: CalculationMode;
+  status: SolverStatus;
+  engine_version: string;
+  standard_profile: StandardProfile[];
+  failure_reason: string | null;
+  solver_summary: SolverSummary;
+  temperatures: {
+    ambient_K: number;
+    entities: EntityTemperature[];
+    thermal_cells?: CellTemperature[];
+  };
+  hotspots: Hotspot[];
+  derating?: DeratingRecommendation[];
+  compliance: {
+    overall_compliant: boolean;
+    checks: ComplianceCheck[];
+  };
+  airflow?: AirflowResult | null;
+  library_manifest_echo?: Record<string, unknown> | null;
+  k_ac_warnings?: KAcWarning[];
+  mode_1_result?: Mode1Result | null;
 }
 
 // ─── Artifacts ───────────────────────────────────────────────────────────────

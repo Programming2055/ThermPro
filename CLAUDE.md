@@ -13,12 +13,26 @@ IEC 61439-1/-2 compliance.
 North American standards (UL 891/1558, ANSI/IEEE C37.20.1) and the IEEE 1584-2018
 arc-flash module are **deferred to future releases** and are not in MVP scope.
 
-**Current phase:** Milestone 0 conditionally approved. Correction commit applied.
-Milestone 1 may begin after the correction commit is reviewed and confirmed complete.
+**Current phase:** M4 — the thermal solver is implemented and wired end to end.
+An M0-03 InputSnapshot submitted to the API is solved by `thermal_core` and
+returned as an M0-04 ResultSnapshot, with compliance, hotspots and derating.
+
+**What does not work yet, by design:** MODE 1 fails until an administrator
+imports the licensed IEC TR 60890 coefficients (CR-ENG-002) — the import path
+is `/api/v1/iec60890-datasets`. BM-007 (De Vahl Davis cavity) is outstanding:
+the zonal network carries one air node per compartment and cannot resolve a
+cavity boundary layer, so it is skipped with that reason rather than
+approximated (see `engine/tests/test_periodic_physics.py`).
 
 ---
 
 ## Repository Layout
+
+The layout below is the *planned* structure from the milestone plan. The
+tree as built uses a workspace layout — `engine/thermal_core/`,
+`apps/api/src/thermpro_api/`, `apps/web/src/`, `packages/units/`,
+`packages/schemas/` — with tests beside each package rather than in one
+top-level `tests/`. Where the two disagree, the repository is correct.
 
 ```
 ThermPro/
@@ -141,33 +155,58 @@ These rules apply to every commit. Any AI assistant or developer MUST enforce th
 
 ---
 
-## Development Commands (after M1 scaffolding)
+## Development Commands
 
 ```bash
-# Install engine in editable mode
-pip install -e ".[dev]"
+# Install every package in editable mode (Python 3.12+)
+pip install -e packages/units/ -e packages/schemas/ -e engine/ -e "apps/api/[dev]"
 
-# Run all unit tests
-pytest tests/unit/ -v
+# Engine tests — what CI runs on every push
+cd engine && pytest tests/ -m "not periodic_physics" -v
 
-# Run every-push benchmark gates
-pytest tests/benchmarks/ -m "not periodic_physics" -v
+# Periodic physics verification (CR-TECH-003 / DR-010; weekly, pre-release)
+cd engine && pytest tests/ -m periodic_physics -v
 
-# Run periodic physics verification (pre-release only)
-pytest tests/benchmarks/ -m periodic_physics -v
+# Unit conversion tests (UT-UNITS-001 … 010)
+pytest packages/units/tests/ -m units -v
 
-# Run unit conversion tests
-pytest tests/unit/test_unit_conversions.py -v
+# API: unit, contract, and integration (integration needs PostgreSQL)
+pytest apps/api/tests/unit/ -v
+pytest apps/api/tests/contract/ -m contract -v
+pytest apps/api/tests/integration/ -m integration -v
 
-# Type checking
-mypy thermpro_engine --strict
+# Lint and type-check — one config at the repository root for every package
+ruff check .
+mypy engine/thermal_core --strict
+mypy apps/api/src/thermpro_api --strict
 
-# Format
-black thermpro_engine backend tests
-isort thermpro_engine backend tests
+# Frontend
+cd apps/web && npm ci && npm run typecheck && npm run lint && npm test && npm run build
 
 # Start dev stack
 docker compose up -d
+```
+
+### Running a calculation
+
+```bash
+# 1. Submit and solve in one request
+curl -X POST localhost:8000/api/v1/calculation-runs \
+  -H 'Content-Type: application/json' \
+  -d '{"project_id": "...", "input_snapshot": {...}, "execute": true}'
+
+# 2. Fetch the M0-04 result, verbatim
+curl localhost:8000/api/v1/calculation-runs/<run_id>/result
+```
+
+`thermal_core.reference_model.m003_document()` returns a worked M0-03
+document to try this with. In Python, the whole contract is one call:
+
+```python
+from thermal_core.contract import solve_json
+from thermal_core.reference_model import m003_document
+
+result = solve_json(m003_document("MODE_2"))   # M0-03 in, M0-04 out
 ```
 
 ---
@@ -206,5 +245,8 @@ docker compose up -d
 | Milestone | Gate | Status |
 |-----------|------|--------|
 | M0 | Engineering approval of all baseline docs + M0 deliverables + correction commit | **CONDITIONALLY APPROVED** |
-| M1 | M0 correction commit confirmed complete + CI green + mypy clean | **Ready to start** |
-| M2–M14 | Per THERM-MILE-001 exit criteria | Blocked on M1 |
+| M1 | Platform foundation: API, database, auth, CI green, mypy clean | **COMPLETE** |
+| M2 | Geometry domain model and enclosure editor | **COMPLETE** |
+| M3 | Engineering libraries and the HeatSource model | **COMPLETE** |
+| M4 | Thermal solver, MODE 1–4 dispatch, compliance, M0-03/M0-04 contract, results UI | **COMPLETE** |
+| M5–M14 | Per THERM-MILE-001 exit criteria | Not started |

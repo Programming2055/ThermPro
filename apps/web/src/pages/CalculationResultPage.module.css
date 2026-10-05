@@ -1,0 +1,214 @@
+.page {
+  max-width: 1100px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.heading {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.sub {
+  font-size: 0.82rem;
+  color: #718096;
+  margin-bottom: 1.25rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid #cbd5e0;
+  background: #fff;
+  color: #2d3748;
+  border-radius: 0.375rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: #f7fafc;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.7rem 0.85rem;
+  background: #fff;
+}
+
+.cardLabel {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #718096;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.cardValue {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1a202c;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardNote {
+  font-size: 0.7rem;
+  color: #a0aec0;
+  margin-top: 0.15rem;
+}
+
+.section {
+  margin-bottom: 1.75rem;
+}
+
+.sectionHeading {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 0.3rem;
+}
+
+.sectionNote {
+  font-size: 0.78rem;
+  color: #718096;
+  margin-bottom: 0.7rem;
+  max-width: 70ch;
+  line-height: 1.5;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.table th {
+  text-align: left;
+  font-weight: 600;
+  color: #4a5568;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 0.4rem 0.6rem;
+  white-space: nowrap;
+}
+
+.table td {
+  border-bottom: 1px solid #edf2f7;
+  padding: 0.4rem 0.6rem;
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  background: #f7fafc;
+  padding: 0.05rem 0.3rem;
+  border-radius: 0.2rem;
+  color: #4a5568;
+}
+
+.rowCritical {
+  background: #fff5f5;
+}
+
+.rowWarning {
+  background: #fffff0;
+}
+
+.verdictPass,
+.verdictFail {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 0.375rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 0.7rem;
+}
+
+.verdictPass {
+  background: #c6f6d5;
+  color: #22543d;
+  border: 1px solid #9ae6b4;
+}
+
+.verdictFail {
+  background: #fed7d7;
+  color: #742a2a;
+  border: 1px solid #fc8181;
+}
+
+.warningList {
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.warningItem {
+  border-left: 3px solid #d69e2e;
+  background: #fffff0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  color: #744210;
+  line-height: 1.5;
+}
+
+.message {
+  color: #718096;
+  font-size: 0.875rem;
+  margin-top: 1rem;
+}
+
+.error {
+  color: #c53030;
+  font-size: 0.875rem;
+  margin-top: 1rem;
+  background: #fff5f5;
+  border: 1px solid #fc8181;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.chartBox {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.6rem;
+  background: #fff;
+  max-width: 620px;
+}
+
+.footnote {
+  font-size: 0.72rem;
+  color: #a0aec0;
+  line-height: 1.6;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.7rem;
+}

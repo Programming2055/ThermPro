@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
-
 
 # ---------------------------------------------------------------------------
 # Version constant
@@ -107,7 +105,7 @@ class CoordinateSystem:
         e.g. "bottom-left-front corner of the enclosure base plate".
     """
 
-    __slots__ = ("version", "origin_description")
+    __slots__ = ("origin_description", "version")
 
     version: str
     origin_description: str
@@ -142,7 +140,7 @@ class Dimensions3D:
     Raises ValueError for any dimension that is <= 0.
     """
 
-    __slots__ = ("width", "height", "depth")
+    __slots__ = ("depth", "height", "width")
 
     width: float   # metres  (X direction)
     height: float  # metres  (Z direction)
@@ -179,7 +177,7 @@ class BoundingBox:
         Width (X), height (Z), and depth (Y) of the box (in metres).
     """
 
-    __slots__ = ("origin", "dimensions")
+    __slots__ = ("dimensions", "origin")
 
     origin: Point3D
     dimensions: Dimensions3D
@@ -228,9 +226,7 @@ class BoundingBox:
         if self._max_y() < other.origin.y or other._max_y() < self.origin.y:
             return False
         # Separation on Z axis
-        if self._max_z() < other.origin.z or other._max_z() < self.origin.z:
-            return False
-        return True
+        return not (self._max_z() < other.origin.z or other._max_z() < self.origin.z)
 
 
 # ---------------------------------------------------------------------------
@@ -269,6 +265,6 @@ class GeometryValidationIssue:
     entity_type: str
     entity_id: str
     message: str
-    coordinate_ref: Optional[Point3D]
-    suggested_fix: Optional[str]
+    coordinate_ref: Point3D | None
+    suggested_fix: str | None
     rule_id: str

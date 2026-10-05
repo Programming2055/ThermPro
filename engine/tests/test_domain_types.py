@@ -1,13 +1,13 @@
 """Tests for domain type enums -- verify fan states, joint conditions, K_AC sources."""
 from thermal_core.domain_types import (
+    CalculationMode,
+    CalculationRunStatus,
+    ContactResistanceSource,
     FanOperatingState,
     JointCondition,
-    ContactResistanceSource,
     KAcSource,
-    CalculationMode,
-    StandardProfile,
-    CalculationRunStatus,
     LibraryStatus,
+    StandardProfile,
 )
 
 

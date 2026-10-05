@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
@@ -17,7 +18,7 @@ class Base(DeclarativeBase):
     pass
 
 
-def _make_engine():
+def _make_engine() -> AsyncEngine:
     settings = get_settings()
     return create_async_engine(
         str(settings.database_url),
@@ -26,18 +27,18 @@ def _make_engine():
     )
 
 
-_engine = None
-_session_factory = None
+_engine: AsyncEngine | None = None
+_session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
-def get_engine():
+def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
         _engine = _make_engine()
     return _engine
 
 
-def get_session_factory():
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
     global _session_factory
     if _session_factory is None:
         _session_factory = async_sessionmaker(

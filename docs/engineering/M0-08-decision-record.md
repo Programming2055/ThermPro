@@ -161,19 +161,19 @@ Five fan operating states replace the previous binary `operating: bool`:
 
 | State | Description | Modelling treatment |
 |-------|-------------|---------------------|
-| `FORWARD_OPERATING` | Fan running in designed direction | P-Q curve interpolation |
+| `RUNNING_FORWARD` | Fan running in designed direction | P-Q curve interpolation |
 | `STOPPED_FREE_FLOW` | Fan stopped; no damper (or damper open) | Resistance element using fan duct area and measured/estimated K_loss |
 | `STOPPED_WITH_DAMPER` | Fan stopped; non-return damper closed | Closed element: zero flow |
 | `FAILED_OPEN` | Fan failed with flow path unobstructed | Same as STOPPED_FREE_FLOW |
 | `FAILED_BLOCKED` | Fan failed with flow path blocked | Same as STOPPED_WITH_DAMPER |
-| `ESTIMATED_REVERSE_FLOW` | Reverse flow present; no physical block | Reverse resistance model using fan duct geometry |
+| `REVERSE_FLOW_ESTIMATED` | Reverse flow present; no physical block | Reverse resistance model using fan duct geometry |
 
 **Rules:**
 - Do not clamp reverse flow to zero unless `STOPPED_WITH_DAMPER` or `FAILED_BLOCKED` is set.
 - Do not extrapolate the normal fan P-Q curve beyond validated bounds; use resistance
   model instead.
-- If reverse flow is detected in `FORWARD_OPERATING` state, emit a `REVERSE_FLOW_DETECTED`
-  warning and switch to `ESTIMATED_REVERSE_FLOW` treatment for that iteration.
+- If reverse flow is detected in `RUNNING_FORWARD` state, emit a `REVERSE_FLOW_DETECTED`
+  warning and switch to `REVERSE_FLOW_ESTIMATED` treatment for that iteration.
 
 **Effective from:** M6
 

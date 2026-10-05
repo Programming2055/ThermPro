@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "thermpro-engine"
-version = "0.1.0"
+version = "0.4.0"
 requires-python = ">=3.12"
 dependencies = [
     "thermpro-units",
@@ -19,5 +19,4 @@ markers = [
     "periodic_physics: physics-accuracy benchmarks; run pre-release only, not on every push (DR-010)",
 ]
 
-[tool.mypy]
-strict = true
+# mypy configuration lives in the repository-root mypy.ini (see that file).

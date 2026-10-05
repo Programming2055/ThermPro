@@ -15,29 +15,52 @@ from thermpro_api.models.geometry import (
     Partition,
     Surface,
 )
+from thermpro_api.models.iec60890_dataset import Iec60890Dataset
+from thermpro_api.models.library import (
+    BusbarProfileLibraryEntry,
+    CableLibraryEntry,
+    ConnectionLibraryEntry,
+    DeviceLibraryEntry,
+    FanLibraryEntry,
+    FilterLibraryEntry,
+    MaterialLibraryEntry,
+    SurfaceLibraryEntry,
+    VentilationOpeningLibraryEntry,
+)
 from thermpro_api.models.library_release import LibraryRelease, LibraryReleaseFile
 from thermpro_api.models.project import Project
 from thermpro_api.models.user import User
 
 __all__ = [
-    "User",
-    "Project",
-    "LibraryRelease",
-    "LibraryReleaseFile",
-    "DatasetManifest",
-    "DatasetManifestEntry",
-    "CalculationRun",
-    "CalculationArtifact",
-    "AuditEvent",
     # M2 geometry
     "Assembly",
-    "Enclosure",
-    "Surface",
-    "Compartment",
-    "Partition",
-    "ExternalOpening",
-    "InternalOpening",
-    "DevicePlacement",
+    "AuditEvent",
     "BusbarPlacement",
+    "BusbarProfileLibraryEntry",
+    "CableLibraryEntry",
+    "CalculationArtifact",
+    "CalculationRun",
+    "Compartment",
+    "ConnectionLibraryEntry",
+    "DatasetManifest",
+    "DatasetManifestEntry",
+    "DeviceLibraryEntry",
+    "DevicePlacement",
+    "Enclosure",
+    "ExternalOpening",
+    "FanLibraryEntry",
+    "FilterLibraryEntry",
     "GeometryValidationIssue",
+    "Iec60890Dataset",
+    "InternalOpening",
+    "LibraryRelease",
+    "LibraryReleaseFile",
+    # M3 library entries
+    "MaterialLibraryEntry",
+    "Partition",
+    "Project",
+    "Surface",
+    "SurfaceLibraryEntry",
+    "User",
+    "VentilationOpeningLibraryEntry",
 ]

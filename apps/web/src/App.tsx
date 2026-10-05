@@ -5,6 +5,7 @@ import { ProjectsPage } from "@/pages/ProjectsPage";
 import { CreateProjectPage } from "@/pages/CreateProjectPage";
 import { LibraryReleasesPage } from "@/pages/LibraryReleasesPage";
 import { CalculationRunsPage } from "@/pages/CalculationRunsPage";
+import { CalculationResultPage } from "@/pages/CalculationResultPage";
 import { HealthPage } from "@/pages/HealthPage";
 import { EnclosuresPage } from "@/pages/EnclosuresPage";
 import { EnclosureEditorPage } from "@/pages/EnclosureEditorPage";
@@ -18,6 +19,7 @@ export function App() {
         <Route path="/projects/new" element={<CreateProjectPage />} />
         <Route path="/library-releases" element={<LibraryReleasesPage />} />
         <Route path="/calculation-runs" element={<CalculationRunsPage />} />
+        <Route path="/calculation-runs/:runId" element={<CalculationResultPage />} />
         <Route path="/health" element={<HealthPage />} />
         <Route path="/enclosures" element={<EnclosuresPage />} />
         <Route path="/enclosures/:enclosureId/edit" element={<EnclosureEditorPage />} />

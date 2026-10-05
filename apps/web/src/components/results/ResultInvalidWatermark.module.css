@@ -1,0 +1,64 @@
+.overlay {
+  position: relative;
+}
+
+/*
+ * The watermark sits over the content, not beside it.
+ *
+ * CR-ENG-005 requires an unconverged result to be visibly invalid. A banner
+ * above the numbers scrolls away; a watermark across them does not, and it
+ * survives a screenshot or a print, which is how these figures usually
+ * leave the screen.
+ */
+.overlay::after {
+  content: attr(data-watermark);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 10;
+  font-size: clamp(2rem, 7vw, 5rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: rgba(197, 48, 48, 0.17);
+  transform: rotate(-24deg);
+  text-align: center;
+  white-space: pre-line;
+}
+
+.banner {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  background: #fff5f5;
+  border: 2px solid #c53030;
+  border-radius: 0.5rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.icon {
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.title {
+  font-weight: 700;
+  color: #742a2a;
+  font-size: 0.95rem;
+  margin-bottom: 0.2rem;
+}
+
+.detail {
+  color: #742a2a;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+@media print {
+  .overlay::after {
+    color: rgba(197, 48, 48, 0.3);
+  }
+}

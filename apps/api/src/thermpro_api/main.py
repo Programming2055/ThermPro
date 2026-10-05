@@ -1,9 +1,13 @@
 """ThermPro FastAPI application entry point."""
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from thermal_core.contract import ENGINE_VERSION
 
 from thermpro_api.routers import (
     artifacts,
@@ -11,12 +15,34 @@ from thermpro_api.routers import (
     dataset_manifests,
     geometry,
     health,
+    iec60890,
+    library_entries,
     library_releases,
     projects,
 )
 from thermpro_api.settings import get_settings
 
 logger = structlog.get_logger()
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """
+    Application startup and shutdown.
+
+    A lifespan context, not the deprecated @app.on_event hooks, so that the
+    shutdown half has somewhere to live when there is work to do there.
+    """
+    settings = get_settings()
+    logger.info(
+        "thermpro_api.startup",
+        version=settings.app_version,
+        debug=settings.debug,
+        dev_auth=settings.dev_auth_enabled,
+        engine_version=ENGINE_VERSION,
+    )
+    yield
+    logger.info("thermpro_api.shutdown")
 
 
 def create_app() -> FastAPI:
@@ -28,9 +54,13 @@ def create_app() -> FastAPI:
         version=settings.app_version,
         description=(
             "ThermPro LV Switchboard Thermal Digital Twin — API server.\n\n"
-            "Milestone 1: Platform foundation. Thermal solver not yet implemented.\n"
-            "All calculation submissions return ENGINE_NOT_IMPLEMENTED."
+            "Submit an M0-03 InputSnapshot, execute it, and retrieve the M0-04 "
+            "ResultSnapshot verbatim.\n\n"
+            "MODE 1 (IEC TR 60890) requires the licensed coefficient dataset, "
+            "which is never shipped in this repository (CR-ENG-002); an "
+            "administrator imports it through /iec60890-datasets."
         ),
+        lifespan=_lifespan,
         docs_url="/api/docs",
         redoc_url="/api/redoc",
         openapi_url="/api/openapi.json",
@@ -54,15 +84,8 @@ def create_app() -> FastAPI:
     app.include_router(calculation_runs.router, prefix=api_v1_prefix)
     app.include_router(artifacts.router, prefix=api_v1_prefix)
     app.include_router(geometry.router, prefix=api_v1_prefix)
-
-    @app.on_event("startup")
-    async def on_startup() -> None:
-        logger.info(
-            "thermpro_api.startup",
-            version=settings.app_version,
-            debug=settings.debug,
-            dev_auth=settings.dev_auth_enabled,
-        )
+    app.include_router(library_entries.router, prefix=api_v1_prefix)
+    app.include_router(iec60890.router, prefix=api_v1_prefix)
 
     return app
 

@@ -5,7 +5,6 @@ import uuid
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from thermpro_api.models.audit_event import AuditEvent
 from thermpro_api.services.auth import UserContext
 

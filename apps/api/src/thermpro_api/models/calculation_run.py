@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -28,7 +28,14 @@ class CalculationRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
                           -> PENDING -> RUNNING -> COMPLETED
                                                 -> FAILED
                                                 -> CANCELLED
-                          -> ENGINE_NOT_IMPLEMENTED (M1 only)
+
+    A run reaches COMPLETED whether the solver converged or not: CR-ENG-005
+    requires an unconverged result to be stored and shown with the RESULT
+    INVALID treatment, and `result_snapshot["status"]` carries that
+    distinction. FAILED means the solver could not produce a field at all.
+
+    ENGINE_NOT_IMPLEMENTED is retained in the enum for runs submitted before
+    the solver existed; nothing writes it now.
     """
 
     __tablename__ = "calculation_runs"
@@ -46,7 +53,7 @@ class CalculationRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
 
     # Immutable input
-    input_snapshot: Mapped[dict] = mapped_column(
+    input_snapshot: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False,
         comment="Verbatim validated InputSnapshot JSON. Never modified after submission.",
     )
@@ -80,7 +87,7 @@ class CalculationRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     completed_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     # Result (stored as JSONB when available; null until completed)
-    result_snapshot: Mapped[dict | None] = mapped_column(
+    result_snapshot: Mapped[dict[str, Any] | None] = mapped_column(
         JSONB, nullable=True,
         comment="ResultSnapshot JSON. Null until status=COMPLETED.",
     )

@@ -8,7 +8,6 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 from thermpro_api.models.library_release import LibraryRelease
 from thermpro_api.services.library import LibraryImmutabilityError, LibraryService
 

@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated, Generic, TypeVar
+from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -15,10 +16,9 @@ from thermpro_api.services.auth import CurrentUser
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
-T = TypeVar("T")
 
 
-class PaginatedResponse(BaseModel, Generic[T]):
+class PaginatedResponse[T](BaseModel):
     items: list[T]
     total: int
     page: int
@@ -36,7 +36,7 @@ class ProjectResponse(BaseModel):
     description: str | None
     owner_id: uuid.UUID
     is_archived: bool
-    created_at: str | None = None
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

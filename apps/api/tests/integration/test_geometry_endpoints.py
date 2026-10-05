@@ -12,7 +12,7 @@ Run with: pytest apps/api/tests/integration/ -m integration
 """
 from __future__ import annotations
 
-import pytest  # noqa: F401 — used via @pytest.mark decorators
+import pytest
 
 # ─── Shared fixtures ──────────────────────────────────────────────────────────
 

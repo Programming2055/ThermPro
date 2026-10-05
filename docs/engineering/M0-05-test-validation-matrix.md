@@ -16,8 +16,9 @@ the test(s) that verify it. Four validation levels are used:
 | Level | Type | When Run |
 |-------|------|----------|
 | L1 | Unit test (pytest) | Every CI push |
-| L2 | Analytical benchmark | Every CI push (benchmarks mark), except BM-007 (see §3) |
+| L2 | Analytical benchmark | Every CI push (`-m "not periodic_physics"`), except BM-007 (see §3) |
 | L3 | Reference example (IEC/CT145) | Pre-release only |
+| L2p | Periodic physics verification | Weekly and pre-release (`-m periodic_physics`), via `.github/workflows/periodic-physics.yml` |
 | L4 | Physical test data import | Pre-production sign-off |
 
 ---
@@ -44,7 +45,7 @@ the test(s) that verify it. Four validation levels are used:
 | FR-THERM-014 | Thermal matrix G·T = Q assembly | UT-MATRIX-001, UT-MATRIX-002 | BM-002 | Residual < 1e-10 |
 | FR-THERM-015 | Convergence detection | UT-MATRIX-003 | BM-002 | Converges within 50 outer iterations |
 | FR-THERM-016 | Divergence → NON_CONVERGED status | UT-MATRIX-004 | — | Status = NON_CONVERGED on deliberately divergent input |
-| FR-THERM-017 | De Vahl Davis cavity benchmark | — | BM-007 | Nu_avg = 8.80 ± 2 % at Ra = 10⁶ (periodic physics verification; see DR-010) |
+| FR-THERM-017 | De Vahl Davis cavity benchmark | — | BM-007 | Nu_avg = 8.80 ± 2 % at Ra = 10⁶ (periodic physics verification; see DR-010). **OUTSTANDING** — the zonal network carries one air node per compartment and cannot resolve a cavity boundary layer, so it cannot reproduce this result. Verifying it needs the MODE 4 CFD path. Recorded as a skip with that reason in `engine/tests/test_periodic_physics.py` rather than approximated. |
 | FR-THERM-018 | Shell conduction for thin walls | UT-COND-003 | BM-002 | Error < 0.01 K vs analytical (thin-wall limit) |
 | FR-THERM-019 | Solid conduction: Q = kA/L × ΔT | UT-COND-001, UT-COND-002 | BM-002 | ±0.001 % vs analytical |
 
