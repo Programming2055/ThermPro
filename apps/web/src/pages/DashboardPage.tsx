@@ -91,8 +91,8 @@ function systemAccent(r: ReadinessResponse | null): "success" | "error" | "neutr
 interface CardProps {
   title: string;
   description: string;
-  href?: string;
-  footer?: string;
+  href?: string | undefined;
+  footer?: string | undefined;
   accent: "success" | "error" | "neutral";
 }
 

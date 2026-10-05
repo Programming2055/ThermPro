@@ -12,10 +12,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 from thermal_core.geometry import Point3D
-
+from thermal_core.libraries import LossConfidence
 
 # ---------------------------------------------------------------------------
 # Classification enumerations
@@ -73,11 +72,11 @@ class LossBreakdown:
     All values in watts (SI). Any field may be None if not disaggregated.
     """
 
-    joule_loss_w: Optional[float] = None        # I²R resistive loss
-    switching_loss_w: Optional[float] = None    # semi-conductor switching (for electronics)
-    iron_loss_w: Optional[float] = None         # magnetic core loss (transformers)
-    contact_loss_w: Optional[float] = None      # contact resistance contribution
-    other_w: Optional[float] = None
+    joule_loss_w: float | None = None        # I²R resistive loss
+    switching_loss_w: float | None = None    # semi-conductor switching (for electronics)
+    iron_loss_w: float | None = None         # magnetic core loss (transformers)
+    contact_loss_w: float | None = None      # contact resistance contribution
+    other_w: float | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -134,16 +133,16 @@ class HeatSource:
     entity_id: str
     power_loss_w: float
     location: Point3D
-    volume_m3: Optional[float]
-    surface_area_m2: Optional[float]
-    confidence: "LossConfidence"  # imported from libraries.py at call site
+    volume_m3: float | None
+    surface_area_m2: float | None
+    confidence: LossConfidence
     calculation_source: LossCalculationSource
-    library_ref: Optional[str]
-    operating_current_a: Optional[float]
-    current_fraction: Optional[float]
-    breakdown: Optional[LossBreakdown] = None
+    library_ref: str | None
+    operating_current_a: float | None
+    current_fraction: float | None
+    breakdown: LossBreakdown | None = None
     generation_type: HeatSourceGenerationType = HeatSourceGenerationType.POINT
-    uncertainty_percent: Optional[float] = None
+    uncertainty_percent: float | None = None
 
     def __post_init__(self) -> None:
         if self.power_loss_w < 0:
@@ -162,22 +161,25 @@ class HeatSource:
             raise ValueError(
                 f"HeatSource.operating_current_a must be >= 0 (A); got {self.operating_current_a}"
             )
-        if self.uncertainty_percent is not None and not (0.0 <= self.uncertainty_percent <= 100.0):
+        if self.uncertainty_percent is not None and not (
+            0.0 <= self.uncertainty_percent <= 100.0
+        ):
             raise ValueError(
-                f"HeatSource.uncertainty_percent must be in [0, 100]; got {self.uncertainty_percent}"
+                "HeatSource.uncertainty_percent must be in [0, 100]; "
+                f"got {self.uncertainty_percent}"
             )
 
     # ------------------------------------------------------------------
     # Derived properties
     # ------------------------------------------------------------------
 
-    def volumetric_power_density_w_per_m3(self) -> Optional[float]:
+    def volumetric_power_density_w_per_m3(self) -> float | None:
         """W/m³ — None if volume is not set."""
         if self.volume_m3 is None or self.volume_m3 == 0:
             return None
         return self.power_loss_w / self.volume_m3
 
-    def surface_heat_flux_w_per_m2(self) -> Optional[float]:
+    def surface_heat_flux_w_per_m2(self) -> float | None:
         """W/m² — None if surface_area is not set."""
         if self.surface_area_m2 is None or self.surface_area_m2 == 0:
             return None
@@ -222,7 +224,7 @@ class HeatSourceMap:
         """Filter sources by entity type."""
         return [s for s in self.sources if s.entity_type == entity_type]
 
-    def by_entity_id(self, entity_id: str) -> Optional[HeatSource]:
+    def by_entity_id(self, entity_id: str) -> HeatSource | None:
         """Look up the HeatSource for a specific placed entity."""
         for s in self.sources:
             if s.entity_id == entity_id:

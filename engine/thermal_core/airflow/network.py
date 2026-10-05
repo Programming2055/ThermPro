@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Optional
 
 from thermal_core.materials.air_properties import air_at
 
@@ -33,7 +32,7 @@ def stack_pressure_pa(
     t_air_k: float,
     t_ambient_k: float,
     height_difference_m: float,
-    air_density_kg_per_m3: Optional[float] = None,
+    air_density_kg_per_m3: float | None = None,
     pressure_pa: float = 101_325.0,
 ) -> float:
     """
@@ -206,10 +205,7 @@ def natural_ventilation_flow(
     a_eff = math.sqrt(a_eff_sq)
 
     abs_dp = abs(dp_stack)
-    if abs_dp < 1e-6:
-        q = 0.0
-    else:
-        q = a_eff * math.sqrt(2.0 * abs_dp / rho)
+    q = 0.0 if abs_dp < 1e-6 else a_eff * math.sqrt(2.0 * abs_dp / rho)
 
     mdot = q * rho
     ach = (q * 3600.0) / compartment_volume_m3 if compartment_volume_m3 > 0 else 0.0

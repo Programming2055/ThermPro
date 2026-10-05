@@ -12,7 +12,6 @@ from __future__ import annotations
 import math
 
 import pytest
-
 from thermal_core.benchmarks.analytical import (
     BenchmarkResult,
     combined_heat_loss,
@@ -22,7 +21,6 @@ from thermal_core.benchmarks.analytical import (
 )
 from thermal_core.benchmarks.iec60890 import (
     IEC60890Coefficients,
-    IEC60890Result,
     check_iec60890_applicability,
     effective_ventilation_area_m2,
     iec60890_temperature_rise,

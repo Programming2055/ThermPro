@@ -2,4 +2,4 @@
 from thermal_core.materials.air_properties import AirProperties, air_at
 from thermal_core.materials.thermal_material import ThermalMaterial
 
-__all__ = ["AirProperties", "air_at", "ThermalMaterial"]
+__all__ = ["AirProperties", "ThermalMaterial", "air_at"]

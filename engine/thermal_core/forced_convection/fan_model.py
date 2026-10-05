@@ -20,7 +20,6 @@ from __future__ import annotations
 
 import bisect
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -59,7 +58,7 @@ def _validate_fan_curve(curve: list[FanCurvePoint]) -> None:
 def interpolate_fan_curve(
     curve: list[FanCurvePoint],
     flow_m3_per_s: float,
-) -> Optional[FanCurvePoint]:
+) -> FanCurvePoint | None:
     """
     Linearly interpolate a fan curve at a given volumetric flow rate.
 
@@ -88,7 +87,9 @@ def interpolate_fan_curve(
 
     return FanCurvePoint(
         flow_m3_per_s=flow_m3_per_s,
-        static_pressure_pa=p0.static_pressure_pa + t * (p1.static_pressure_pa - p0.static_pressure_pa),
+        static_pressure_pa=(
+            p0.static_pressure_pa + t * (p1.static_pressure_pa - p0.static_pressure_pa)
+        ),
         power_w=p0.power_w + t * (p1.power_w - p0.power_w),
         efficiency=p0.efficiency + t * (p1.efficiency - p0.efficiency),
     )
@@ -98,7 +99,7 @@ def fan_operating_point(
     curve: list[FanCurvePoint],
     system_resistance_pa_per_m3_per_s_sq: float,
     n_search_points: int = 500,
-) -> Optional[FanOperatingPoint]:
+) -> FanOperatingPoint | None:
     """
     Find the fan-system operating point by bracketed linear search.
 

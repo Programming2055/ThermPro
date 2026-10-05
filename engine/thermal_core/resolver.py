@@ -24,21 +24,15 @@ Instead, it accepts plain Python dicts or dataclass instances from the library l
 """
 from __future__ import annotations
 
-from typing import Any, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from thermal_core.libraries import (
-    BusbarProfileLibraryEntry,
-    CableLibraryEntry,
-    ConnectionLibraryEntry,
     DeviceLibraryEntry,
     FanLibraryEntry,
-    FilterLibraryEntry,
     MaterialLibraryEntry,
     SurfaceLibraryEntry,
-    VentilationOpeningLibraryEntry,
 )
 from thermal_core.materials.thermal_material import ThermalMaterial
-
 
 # ---------------------------------------------------------------------------
 # Protocol: what the resolver expects from the library layer
@@ -48,15 +42,15 @@ from thermal_core.materials.thermal_material import ThermalMaterial
 @runtime_checkable
 class HasMaterialAttributes(Protocol):
     """Protocol for objects that can be resolved into a ThermalMaterial."""
-    domain_entry_id: str
+    entry_id: str
     name: str
     thermal_conductivity_w_per_m_k: float
     density_kg_per_m3: float
     specific_heat_j_per_kg_k: float
-    electrical_resistivity_ohm_m: Optional[float]
-    temp_coeff_resistance_per_k: Optional[float]
-    emissivity: Optional[float]
-    max_operating_temp_k: Optional[float]
+    electrical_resistivity_ohm_m: float | None
+    temp_coeff_resistance_per_k: float | None
+    emissivity: float | None
+    max_operating_temp_k: float | None
 
 
 # ---------------------------------------------------------------------------
@@ -82,7 +76,7 @@ class LibraryResolver:
         The ThermalMaterial is what the solver sees — never the raw library entry.
         """
         return ThermalMaterial(
-            material_id=entry.domain_entry_id,
+            material_id=entry.entry_id,
             name=entry.name,
             thermal_conductivity_w_per_m_k=entry.thermal_conductivity_w_per_m_k,
             density_kg_per_m3=entry.density_kg_per_m3,
@@ -97,11 +91,13 @@ class LibraryResolver:
         """
         Convert a plain dict (e.g. from JSON deserialization) to a ThermalMaterial.
 
+        Keys mirror MaterialLibraryEntry field names.
+
         This allows the resolver to be used without importing M3 library classes,
         keeping the solver package independent of the ORM layer.
         """
         return ThermalMaterial(
-            material_id=data["domain_entry_id"],
+            material_id=data["entry_id"],
             name=data["name"],
             thermal_conductivity_w_per_m_k=float(data["thermal_conductivity_w_per_m_k"]),
             density_kg_per_m3=float(data["density_kg_per_m3"]),

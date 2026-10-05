@@ -12,10 +12,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
-from thermal_core.heat_source import HeatSource, HeatSourceMap
-
+from thermal_core.heat_source import HeatSourceMap
 
 # ---------------------------------------------------------------------------
 # Calculation modes (must match API-layer enum)
@@ -92,13 +90,13 @@ class OpeningSnapshot:
     Used for both natural openings (orifice flow) and forced openings (fan outlets).
     """
     opening_id: str
-    from_compartment_id: Optional[str]  # None → from external ambient
-    to_compartment_id: Optional[str]    # None → to external ambient
+    from_compartment_id: str | None  # None → from external ambient
+    to_compartment_id: str | None    # None → to external ambient
     free_area_m2: float                 # net open area [m²]
     discharge_coefficient: float        # Cd, dimensionless ∈ (0, 1]
     centroid_height_m: float            # height of centroid above enclosure base [m]
     is_forced: bool                     # True → fan-driven; flow given in BoundaryConditions
-    fan_id: Optional[str]               # library fan id if forced
+    fan_id: str | None               # library fan id if forced
 
     def __post_init__(self) -> None:
         if self.free_area_m2 <= 0:
@@ -167,14 +165,14 @@ class GeometrySnapshot:
         if not self.compartments:
             raise ValueError("GeometrySnapshot must have at least one compartment")
 
-    def surface_by_id(self, surface_id: str) -> Optional[SurfaceSnapshot]:
+    def surface_by_id(self, surface_id: str) -> SurfaceSnapshot | None:
         """Look up a surface by its ID."""
         for s in self.surfaces:
             if s.surface_id == surface_id:
                 return s
         return None
 
-    def compartment_by_id(self, compartment_id: str) -> Optional[CompartmentSnapshot]:
+    def compartment_by_id(self, compartment_id: str) -> CompartmentSnapshot | None:
         """Look up a compartment by its ID."""
         for c in self.compartments:
             if c.compartment_id == compartment_id:

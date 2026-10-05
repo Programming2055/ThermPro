@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated, Any, Generic, TypeVar
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -16,10 +16,9 @@ from thermpro_api.services.calculation import CalculationService, CalculationSub
 
 router = APIRouter(prefix="/calculation-runs", tags=["calculation-runs"])
 
-T = TypeVar("T")
 
 
-class PaginatedResponse(BaseModel, Generic[T]):
+class PaginatedResponse[T](BaseModel):
     items: list[T]
     total: int
     page: int

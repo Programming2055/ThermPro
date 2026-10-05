@@ -54,11 +54,12 @@ async function request<T>(
   // In production this would attach the JWT from the auth store.
   // For M1 development, the backend uses DevAuthProvider (no token needed).
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  const init: RequestInit = { method, headers };
+  if (body !== undefined) {
+    init.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(`${BASE_URL}${path}`, init);
 
   if (!response.ok) {
     let errorData: { error?: { code?: string; message?: string; details?: Array<{ field: string; issue: string }> } } = {};

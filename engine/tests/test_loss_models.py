@@ -2,7 +2,6 @@
 import warnings
 
 import pytest
-
 from thermal_core.geometry import Point3D
 from thermal_core.heat_source import (
     HeatSource,
@@ -33,7 +32,6 @@ from thermal_core.loss_models import (
     device_heat_source,
     joint_heat_source,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -126,7 +124,7 @@ def _make_cable() -> CableLibraryEntry:
 
 
 def test_t_ref_k_is_20c() -> None:
-    assert T_REF_K == pytest.approx(293.15)
+    assert pytest.approx(293.15) == T_REF_K
 
 
 # ---------------------------------------------------------------------------
@@ -247,8 +245,12 @@ class TestDeviceHeatSource:
 
     def test_source_id_is_unique(self) -> None:
         dev = _make_device()
-        hs1 = device_heat_source(device=dev, entity_id="e", location=_loc(), operating_current_a=0.0)
-        hs2 = device_heat_source(device=dev, entity_id="e", location=_loc(), operating_current_a=0.0)
+        hs1 = device_heat_source(
+            device=dev, entity_id="e", location=_loc(), operating_current_a=0.0
+        )
+        hs2 = device_heat_source(
+            device=dev, entity_id="e", location=_loc(), operating_current_a=0.0
+        )
         assert hs1.source_id != hs2.source_id
 
 
@@ -358,7 +360,7 @@ class TestBusbarHeatSourceResolved:
 
     def test_k_ac_below_one_rejected(self) -> None:
         profile = _make_busbar_profile()
-        with pytest.raises(ValueError, match="k_ac must be >= 1.0"):
+        with pytest.raises(ValueError, match=r"k_ac must be >= 1\.0"):
             busbar_heat_source_resolved(
                 profile=profile,
                 material_resistivity_ohm_m=CU_RESISTIVITY,

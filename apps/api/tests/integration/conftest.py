@@ -14,7 +14,6 @@ import os
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine
-
 from thermpro_api.database import Base
 from thermpro_api.main import app
 

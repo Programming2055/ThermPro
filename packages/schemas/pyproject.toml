@@ -13,6 +13,4 @@ dependencies = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/thermpro_schemas"]
 
-[tool.mypy]
-strict = true
-ignore_missing_imports = true
+# mypy configuration lives in the repository-root mypy.ini (see that file).

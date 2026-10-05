@@ -1,0 +1,33 @@
+# Repository-wide ruff configuration.
+#
+# Ruff resolves configuration hierarchically. Without a file at the repository
+# root, the per-package pyproject.toml settings only applied to paths below
+# them, so `ruff check engine/ packages/` fell back to ruff's built-in defaults
+# and CI linted a different rule set from local runs. This file makes the rule
+# set identical for every package.
+
+line-length = 100
+target-version = "py312"
+
+[lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+ignore = [
+    # Engineering notation is deliberate throughout this codebase: physical
+    # symbols (T_amb, Q_c, UA_total, P_tot) are far more readable to a thermal
+    # engineer reviewing against THERM-EQN-001 than snake_case transliterations.
+    "N803",
+    "N806",
+    # Docstrings and comments quote the standards verbatim and carry SI symbols
+    # (ΔT, ρ, ×, °C, ²). Ruff flags these as "ambiguous unicode"; they are not.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # `class Foo(str, Enum)` is used across the domain types for JSON round-trip
+    # behaviour that differs from enum.StrEnum. Migrating is a semantic change,
+    # not a lint fix.
+    "UP042",
+]
+
+[lint.per-file-ignores]
+# FastAPI's dependency-injection idiom is a function call in a default argument.
+"**/routers/*.py" = ["B008"]

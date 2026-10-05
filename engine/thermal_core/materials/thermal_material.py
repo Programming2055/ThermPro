@@ -17,7 +17,6 @@ Equation reference: THERM-EQN-001 §6.1 (Solid Material Properties)
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(frozen=True)
@@ -38,14 +37,14 @@ class ThermalMaterial:
     specific_heat_j_per_kg_k: float         # Cp [J/(kg·K)]
 
     # Electrical properties (optional)
-    electrical_resistivity_ohm_m: Optional[float] = None   # ρ_e [Ω·m] at T_ref
-    temp_coeff_resistance_per_k: Optional[float] = None    # α_T [K⁻¹]
+    electrical_resistivity_ohm_m: float | None = None   # ρ_e [Ω·m] at T_ref
+    temp_coeff_resistance_per_k: float | None = None    # α_T [K⁻¹]
 
     # Surface radiative property (if material surface is exposed)
-    emissivity: Optional[float] = None      # ε [-]
+    emissivity: float | None = None      # ε [-]
 
     # Maximum operating temperature
-    max_operating_temp_k: Optional[float] = None  # T_max [K]
+    max_operating_temp_k: float | None = None  # T_max [K]
 
     def __post_init__(self) -> None:
         if self.thermal_conductivity_w_per_m_k <= 0:
@@ -95,7 +94,7 @@ class ThermalMaterial:
         _ = temperature_k
         return self.specific_heat_j_per_kg_k
 
-    def rho_e(self, temperature_k: float, t_ref_k: float = 293.15) -> Optional[float]:
+    def rho_e(self, temperature_k: float, t_ref_k: float = 293.15) -> float | None:
         """
         Electrical resistivity at T [Ω·m] with linear temperature correction.
 
@@ -110,7 +109,7 @@ class ThermalMaterial:
         alpha = self.temp_coeff_resistance_per_k
         return self.electrical_resistivity_ohm_m * (1.0 + alpha * (temperature_k - t_ref_k))
 
-    def eps(self, temperature_k: float) -> Optional[float]:
+    def eps(self, temperature_k: float) -> float | None:
         """Emissivity at T [-]. MVP: constant. Returns None if not set."""
         _ = temperature_k
         return self.emissivity

@@ -12,9 +12,13 @@ Tests cover:
 from __future__ import annotations
 
 import pytest
-
-from thermal_core.heat_source import HeatSource, HeatSourceEntityType, HeatSourceMap, LossCalculationSource
 from thermal_core.geometry import Point3D
+from thermal_core.heat_source import (
+    HeatSource,
+    HeatSourceEntityType,
+    HeatSourceMap,
+    LossCalculationSource,
+)
 from thermal_core.libraries import LossConfidence
 from thermal_core.result import SolverStatus
 from thermal_core.snapshot import (
@@ -28,8 +32,7 @@ from thermal_core.snapshot import (
     SurfaceOrientation,
     SurfaceSnapshot,
 )
-from thermal_core.solver.iterative import ZonalSolver, solve
-
+from thermal_core.solver.iterative import solve
 
 # ---------------------------------------------------------------------------
 # Test fixture builders

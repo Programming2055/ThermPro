@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Optional
 
 from thermal_core.result import ConvergenceTrace
 
@@ -37,7 +36,7 @@ class ConvergenceMonitor:
         t_new: list[float],
         q_in_w: float,
         q_out_w: float,
-        ua_total_w_per_k: Optional[float] = None,
+        ua_total_w_per_k: float | None = None,
     ) -> ConvergenceTrace:
         """
         Record iteration diagnostics and return the trace row.
@@ -57,7 +56,7 @@ class ConvergenceMonitor:
         """
         if len(t_old) != len(t_new):
             raise ValueError("t_old and t_new must have the same length")
-        deltas = [abs(n - o) for n, o in zip(t_new, t_old)]
+        deltas = [abs(n - o) for n, o in zip(t_new, t_old, strict=True)]
         max_dt = max(deltas) if deltas else 0.0
         rms_dt = math.sqrt(sum(d * d for d in deltas) / len(deltas)) if deltas else 0.0
         eb_err = abs(q_in_w - q_out_w)

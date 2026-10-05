@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { healthApi } from "@/api/client";
 import type { HealthResponse, ReadinessResponse } from "@/types/api";
 import { useSystemStore } from "@/store";
@@ -12,7 +12,7 @@ export function HealthPage() {
   const [error, setError] = useState<string | null>(null);
   const [checkedAt, setCheckedAt] = useState<Date | null>(null);
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     setLoading(true);
     setError(null);
     Promise.all([healthApi.health(), healthApi.ready()])
@@ -27,9 +27,11 @@ export function HealthPage() {
         setError(e instanceof Error ? e.message : "Health check failed");
         setLoading(false);
       });
-  };
+  }, [setReadiness]);
 
-  useEffect(refresh, []);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return (
     <div className={styles.page}>

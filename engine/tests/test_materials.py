@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import pytest
-
 from thermal_core.materials.air_properties import air_at, film_temperature_k
 from thermal_core.materials.thermal_material import ThermalMaterial
 
@@ -45,7 +44,7 @@ class TestAirAt:
         props = air_at(T_20C_K)
         assert 0.6 <= props.prandtl_number <= 0.8
 
-    def test_thermal_expansion_is_1_over_T(self) -> None:
+    def test_thermal_expansion_is_one_over_t(self) -> None:
         props = air_at(T_20C_K)
         expected = 1.0 / T_20C_K
         assert props.thermal_expansion_per_k == pytest.approx(expected, rel=1e-6)

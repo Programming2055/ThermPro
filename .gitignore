@@ -24,7 +24,6 @@ htmlcov/
 
 # Node / frontend
 node_modules/
-package-lock.json
 dist/
 .vite/
 

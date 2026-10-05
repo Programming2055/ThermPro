@@ -20,5 +20,4 @@ markers = [
     "periodic_physics: physics-accuracy benchmarks; run pre-release only, not on every push (DR-010)",
 ]
 
-[tool.mypy]
-strict = true
+# mypy configuration lives in the repository-root mypy.ini (see that file).

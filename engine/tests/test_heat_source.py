@@ -1,6 +1,5 @@
 """Tests for M3 HeatSource domain objects."""
 import pytest
-
 from thermal_core.geometry import Point3D
 from thermal_core.heat_source import (
     HeatSource,
@@ -10,7 +9,6 @@ from thermal_core.heat_source import (
     LossCalculationSource,
 )
 from thermal_core.libraries import LossConfidence
-
 
 # ---------------------------------------------------------------------------
 # Helpers

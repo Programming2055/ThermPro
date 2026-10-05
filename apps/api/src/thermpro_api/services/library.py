@@ -7,7 +7,6 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from thermpro_api.models.library_release import LibraryRelease
 from thermpro_api.services.hashing import sha256_hex
 

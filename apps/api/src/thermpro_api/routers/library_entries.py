@@ -13,7 +13,7 @@ Mutation is blocked once the parent release is APPROVED (CR-ENG-012).
 from __future__ import annotations
 
 import uuid
-from typing import Annotated, Any, Generic, TypeVar
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -23,13 +23,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from thermpro_api.database import get_db
 from thermpro_api.models.library import (
     BusbarProfileLibraryEntry as BusbarProfileORM,
+)
+from thermpro_api.models.library import (
     CableLibraryEntry as CableORM,
+)
+from thermpro_api.models.library import (
     ConnectionLibraryEntry as ConnectionORM,
+)
+from thermpro_api.models.library import (
     DeviceLibraryEntry as DeviceORM,
+)
+from thermpro_api.models.library import (
     FanLibraryEntry as FanORM,
+)
+from thermpro_api.models.library import (
     FilterLibraryEntry as FilterORM,
+)
+from thermpro_api.models.library import (
     MaterialLibraryEntry as MaterialORM,
+)
+from thermpro_api.models.library import (
     SurfaceLibraryEntry as SurfaceORM,
+)
+from thermpro_api.models.library import (
     VentilationOpeningLibraryEntry as VentilationOpeningORM,
 )
 from thermpro_api.models.library_release import LibraryRelease
@@ -37,10 +53,9 @@ from thermpro_api.services.auth import CurrentUser
 
 router = APIRouter(prefix="/library-entries", tags=["library-entries"])
 
-T = TypeVar("T")
 
 
-class PaginatedResponse(BaseModel, Generic[T]):
+class PaginatedResponse[T](BaseModel):
     items: list[T]
     total: int
     page: int

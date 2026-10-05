@@ -28,10 +28,7 @@ Equation reference: THERM-EQN-001 §8 (IEC TR 60890 Method)
 """
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass
-from typing import Optional
-
 
 # ---------------------------------------------------------------------------
 # IEC TR 60890 applicability
@@ -52,7 +49,7 @@ class IEC60890Applicability:
 def check_iec60890_applicability(
     has_forced_ventilation: bool,
     has_busbars_with_unknown_losses: bool,
-    form_type: Optional[str] = None,
+    form_type: str | None = None,
 ) -> IEC60890Applicability:
     """
     Check whether IEC TR 60890 (MODE 1) applies to the given configuration.

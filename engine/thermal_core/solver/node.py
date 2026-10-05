@@ -13,9 +13,8 @@ All temperatures in kelvin (CR-ENG-003).
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class NodeType(str, Enum):
@@ -38,7 +37,7 @@ class ThermalNode:
     temperature_k: float       # current temperature estimate [K]
     is_fixed: bool             # True → temperature never updated (boundary condition)
     heat_generation_w: float   # Q injected at this node [W]
-    area_m2: Optional[float]   # surface area (for flux calculation) [m²]
+    area_m2: float | None   # surface area (for flux calculation) [m²]
 
     def __post_init__(self) -> None:
         if self.temperature_k <= 0:

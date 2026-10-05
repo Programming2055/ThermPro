@@ -13,6 +13,7 @@ entry. The `domain_entry_id` column holds the library-assigned string key
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from sqlalchemy import Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -50,7 +51,7 @@ class MaterialLibraryEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     temp_coeff_resistance_per_k: Mapped[float | None] = mapped_column(Float, nullable=True)
     emissivity: Mapped[float | None] = mapped_column(Float, nullable=True)
     max_operating_temp_k: Mapped[float | None] = mapped_column(Float, nullable=True)
-    references: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    references: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     release: Mapped[LibraryRelease] = relationship("LibraryRelease")
@@ -80,7 +81,7 @@ class SurfaceLibraryEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     roughness_um: Mapped[float | None] = mapped_column(Float, nullable=True)
     coating: Mapped[str | None] = mapped_column(String(255), nullable=True)
     material_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    references: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    references: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
 
     release: Mapped[LibraryRelease] = relationship("LibraryRelease")
 
@@ -112,7 +113,7 @@ class BusbarProfileLibraryEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     cross_section_area_m2: Mapped[float] = mapped_column(Float, nullable=False)
     max_continuous_current_a: Mapped[float | None] = mapped_column(Float, nullable=True)
     emissivity_override: Mapped[float | None] = mapped_column(Float, nullable=True)
-    references: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    references: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
 
     release: Mapped[LibraryRelease] = relationship("LibraryRelease")
 
@@ -146,13 +147,13 @@ class DeviceLibraryEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     mounting_type: Mapped[str] = mapped_column(String(32), nullable=False)
     ventilation_requirement: Mapped[str] = mapped_column(String(64), nullable=False)
     max_ambient_temp_k: Mapped[float] = mapped_column(Float, nullable=False)
-    power_loss_curve: Mapped[list] = mapped_column(
+    power_loss_curve: Mapped[list[Any]] = mapped_column(
         JSONB,
         nullable=False,
         comment="[{current_fraction: float, power_loss_w: float}, ...]",
     )
     loss_confidence: Mapped[str] = mapped_column(String(64), nullable=False)
-    references: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    references: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     release: Mapped[LibraryRelease] = relationship("LibraryRelease")
@@ -185,12 +186,12 @@ class FanLibraryEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     rated_power_w: Mapped[float] = mapped_column(Float, nullable=False)
     voltage_v: Mapped[float | None] = mapped_column(Float, nullable=True)
     frequency_hz: Mapped[float | None] = mapped_column(Float, nullable=True)
-    fan_curve: Mapped[list] = mapped_column(
+    fan_curve: Mapped[list[Any]] = mapped_column(
         JSONB,
         nullable=False,
         comment="[{flow_m3_per_s, static_pressure_pa, power_w, efficiency}, ...]",
     )
-    references: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    references: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
 
     release: Mapped[LibraryRelease] = relationship("LibraryRelease")
 
@@ -221,7 +222,7 @@ class FilterLibraryEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     loss_coefficient: Mapped[float] = mapped_column(Float, nullable=False)
     porosity: Mapped[float | None] = mapped_column(Float, nullable=True)
     initial_efficiency: Mapped[float | None] = mapped_column(Float, nullable=True)
-    references: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    references: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
 
     release: Mapped[LibraryRelease] = relationship("LibraryRelease")
 
@@ -252,7 +253,7 @@ class VentilationOpeningLibraryEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     open_area_fraction: Mapped[float] = mapped_column(Float, nullable=False)
     discharge_coefficient: Mapped[float] = mapped_column(Float, nullable=False)
     filter_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    references: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    references: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
 
     release: Mapped[LibraryRelease] = relationship("LibraryRelease")
 
@@ -285,7 +286,7 @@ class CableLibraryEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     resistance_ohm_per_m: Mapped[float] = mapped_column(Float, nullable=False)
     temp_coeff_resistance_per_k: Mapped[float] = mapped_column(Float, nullable=False)
     max_conductor_temp_k: Mapped[float] = mapped_column(Float, nullable=False)
-    references: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    references: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
 
     release: Mapped[LibraryRelease] = relationship("LibraryRelease")
 
@@ -317,7 +318,7 @@ class ConnectionLibraryEntry(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     joint_resistance_ohm: Mapped[float] = mapped_column(Float, nullable=False)
     resistance_source: Mapped[str] = mapped_column(String(64), nullable=False)
     age_factor: Mapped[float] = mapped_column(Float, nullable=False, server_default="1.0")
-    references: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    references: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     release: Mapped[LibraryRelease] = relationship("LibraryRelease")

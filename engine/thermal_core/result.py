@@ -11,10 +11,8 @@ ResultSnapshot — it never raises on convergence failure.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
-
 
 # ---------------------------------------------------------------------------
 # Status codes
@@ -53,7 +51,7 @@ class NodeTemperature:
     node_type: NodeType
     temperature_k: float
     heat_generation_w: float        # power injected at this node [W]
-    net_heat_flux_w_per_m2: Optional[float]  # None for non-surface nodes
+    net_heat_flux_w_per_m2: float | None  # None for non-surface nodes
 
     def temperature_celsius(self) -> float:
         """Convenience accessor — NOT used inside the solver (CR-ENG-013)."""
@@ -78,7 +76,7 @@ class ConvergenceTrace:
     max_delta_k: float       # max |ΔT| across all nodes this iteration [K]
     rms_delta_k: float       # RMS |ΔT| across all nodes [K]
     energy_balance_error_w: float   # |Q_in - Q_out| summed over all nodes [W]
-    ua_total_w_per_k: Optional[float]  # total conductance (diagnostic) [W/K]
+    ua_total_w_per_k: float | None  # total conductance (diagnostic) [W/K]
 
     def __post_init__(self) -> None:
         if self.iteration < 0:
@@ -103,8 +101,8 @@ class CompartmentResult:
     """
     compartment_id: str
     mean_air_temperature_k: float
-    max_device_temperature_k: Optional[float]
-    max_surface_temperature_k: Optional[float]
+    max_device_temperature_k: float | None
+    max_surface_temperature_k: float | None
     total_heat_generation_w: float
     heat_to_ambient_w: float
 
@@ -127,7 +125,7 @@ class SolverWarning:
     """
     code: str           # e.g. "WARN-011-KAC-ONE", "WARN-005-NON-CONVERGED"
     message: str        # human-readable description
-    entity_id: Optional[str] = None   # which entity triggered this warning
+    entity_id: str | None = None   # which entity triggered this warning
 
 
 # ---------------------------------------------------------------------------
@@ -176,21 +174,21 @@ class ResultSnapshot:
         """True only if the result is converged and may be used for compliance."""
         return self.status == SolverStatus.CONVERGED
 
-    def max_air_temperature_k(self) -> Optional[float]:
+    def max_air_temperature_k(self) -> float | None:
         """Maximum compartment air temperature across all compartments [K]."""
         air_nodes = [n for n in self.node_temperatures if n.node_type == NodeType.AIR]
         if not air_nodes:
             return None
         return max(n.temperature_k for n in air_nodes)
 
-    def node_by_id(self, node_id: str) -> Optional[NodeTemperature]:
+    def node_by_id(self, node_id: str) -> NodeTemperature | None:
         """Look up a node temperature by ID."""
         for n in self.node_temperatures:
             if n.node_id == node_id:
                 return n
         return None
 
-    def compartment_result_by_id(self, compartment_id: str) -> Optional[CompartmentResult]:
+    def compartment_result_by_id(self, compartment_id: str) -> CompartmentResult | None:
         """Look up compartment results by compartment ID."""
         for cr in self.compartment_results:
             if cr.compartment_id == compartment_id:

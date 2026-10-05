@@ -10,13 +10,18 @@ from __future__ import annotations
 import math
 
 import pytest
-
+from thermal_core.airflow.network import (
+    natural_ventilation_flow,
+    orifice_flow_m3_per_s,
+    stack_pressure_pa,
+)
 from thermal_core.conduction.fourier import (
     composite_wall_resistance_k_per_w,
     contact_resistance_k_per_w,
     wall_conductance_w_per_k,
     wall_resistance_k_per_w,
 )
+from thermal_core.materials.air_properties import air_at
 from thermal_core.natural_convection.churchill_chu import (
     convection_coefficient,
     convection_coefficient_vertical,
@@ -25,7 +30,6 @@ from thermal_core.natural_convection.churchill_chu import (
     nusselt_vertical_plate,
     rayleigh_number,
 )
-from thermal_core.materials.air_properties import air_at
 from thermal_core.radiation.gray_body import (
     STEFAN_BOLTZMANN,
     effective_emissivity_two_surfaces,
@@ -33,13 +37,7 @@ from thermal_core.radiation.gray_body import (
     linearised_radiation_coefficient,
     radiation_conductance_w_per_k,
 )
-from thermal_core.airflow.network import (
-    natural_ventilation_flow,
-    orifice_flow_m3_per_s,
-    stack_pressure_pa,
-)
 from thermal_core.snapshot import SurfaceOrientation
-
 
 # ---------------------------------------------------------------------------
 # Conduction
@@ -51,7 +49,7 @@ class TestWallResistance:
         # 2 mm steel plate: L=0.002, k=50, A=1
         R = wall_resistance_k_per_w(0.002, 50.0, 1.0)
         expected = 0.002 / (50.0 * 1.0)
-        assert R == pytest.approx(expected)
+        assert pytest.approx(expected) == R
 
     def test_zero_thickness_returns_zero(self) -> None:
         R = wall_resistance_k_per_w(0.0, 50.0, 1.0)
@@ -60,11 +58,11 @@ class TestWallResistance:
     def test_conductance_is_reciprocal(self) -> None:
         R = wall_resistance_k_per_w(0.01, 1.0, 1.0)
         G = wall_conductance_w_per_k(0.01, 1.0, 1.0)
-        assert G == pytest.approx(1.0 / R, rel=1e-9)
+        assert pytest.approx(1.0 / R, rel=1e-9) == G
 
     def test_zero_thickness_conductance_is_large(self) -> None:
         G = wall_conductance_w_per_k(0.0, 50.0, 1.0)
-        assert G == pytest.approx(1e12)
+        assert pytest.approx(1e12) == G
 
     def test_negative_thickness_rejected(self) -> None:
         with pytest.raises(ValueError):
@@ -83,7 +81,7 @@ class TestWallResistance:
         layers = [(0.01, 1.0), (0.01, 1.0)]
         R = composite_wall_resistance_k_per_w(layers, area_m2=1.0)
         expected = 0.01 / 1.0 + 0.01 / 1.0
-        assert R == pytest.approx(expected)
+        assert pytest.approx(expected) == R
 
     def test_empty_layers_rejected(self) -> None:
         with pytest.raises(ValueError):
@@ -92,7 +90,7 @@ class TestWallResistance:
     def test_contact_resistance(self) -> None:
         # r'' = 1e-4 m²·K/W, A = 1 m²
         R = contact_resistance_k_per_w(1e-4, 1.0)
-        assert R == pytest.approx(1e-4)
+        assert pytest.approx(1e-4) == R
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +197,7 @@ class TestConvectionCoefficient:
 class TestRadiation:
     def test_stefan_boltzmann_constant(self) -> None:
         # CODATA 2018 exact value
-        assert STEFAN_BOLTZMANN == pytest.approx(5.670374419e-8, rel=1e-9)
+        assert pytest.approx(5.670374419e-8, rel=1e-9) == STEFAN_BOLTZMANN
 
     def test_zero_flux_at_equal_temperatures(self) -> None:
         q = gray_body_heat_flux(300.0, 300.0, 0.9)
@@ -243,7 +241,7 @@ class TestRadiation:
     def test_conductance_equals_h_times_area(self) -> None:
         G = radiation_conductance_w_per_k(350.0, 300.0, 0.7, 2.0)
         h = linearised_radiation_coefficient(350.0, 300.0, 0.7)
-        assert G == pytest.approx(h * 2.0, rel=1e-9)
+        assert pytest.approx(h * 2.0, rel=1e-9) == G
 
     def test_effective_emissivity_two_black_surfaces(self) -> None:
         eps_eff = effective_emissivity_two_surfaces(1.0, 1.0)

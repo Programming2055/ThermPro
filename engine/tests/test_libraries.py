@@ -1,6 +1,5 @@
 """Tests for M3 engineering library domain types."""
 import pytest
-
 from thermal_core.libraries import (
     BusbarCoating,
     BusbarProfile,

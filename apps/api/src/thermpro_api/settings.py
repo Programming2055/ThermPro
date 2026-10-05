@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     # Database
     database_url: PostgresDsn = Field(
-        default="postgresql+psycopg://thermpro:thermpro@localhost:5432/thermpro",
+        default=PostgresDsn("postgresql+psycopg://thermpro:thermpro@localhost:5432/thermpro"),
         description="PostgreSQL connection string (psycopg3 dialect).",
     )
 

@@ -25,19 +25,11 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install ruff
-        run: pip install ruff==0.6.9
+        run: pip install ruff==0.16.10
 
-      - name: Lint apps/api
-        run: ruff check apps/api/src/ apps/api/tests/
-        continue-on-error: false
-
-      - name: Lint engine
-        run: ruff check engine/thermal_core/ engine/tests/
-        continue-on-error: false
-
-      - name: Lint packages
-        run: ruff check packages/units/src/ packages/schemas/src/
-        continue-on-error: false
+      # One rule set for the whole repository (ruff.toml at the root).
+      - name: Lint
+        run: ruff check .
 
   # ---------------------------------------------------------------------------
   # 2. Type-check (mypy)
@@ -54,18 +46,11 @@ jobs:
 
       - name: Install packages
         run: |
-          pip install --no-cache-dir \
-            /home/runner/work/ThermPro/ThermPro/packages/units/ \
-            /home/runner/work/ThermPro/ThermPro/packages/schemas/ \
-            /home/runner/work/ThermPro/ThermPro/engine/ \
-            mypy pydantic[mypy] structlog
-
-      - name: Install thermpro packages for mypy
-        working-directory: ${{ github.workspace }}
-        run: |
+          pip install mypy "pydantic[mypy]"
           pip install -e packages/units/
           pip install -e packages/schemas/
           pip install -e engine/
+          pip install -e "apps/api/[dev]"
 
       - name: mypy — thermpro_units
         run: mypy packages/units/src/thermpro_units --strict
@@ -74,7 +59,10 @@ jobs:
         run: mypy engine/thermal_core --strict
 
       - name: mypy — thermpro_schemas
-        run: mypy packages/schemas/src/thermpro_schemas --strict --ignore-missing-imports
+        run: mypy packages/schemas/src/thermpro_schemas --strict
+
+      - name: mypy — thermpro_api
+        run: mypy apps/api/src/thermpro_api --strict
 
   # ---------------------------------------------------------------------------
   # 3. Schema validation (validate M0-03 and M0-04 JSON files are valid JSON)
@@ -163,9 +151,21 @@ jobs:
         working-directory: apps/web
         run: npm ci
 
+      - name: Typecheck (tsc)
+        working-directory: apps/web
+        run: npm run typecheck
+
+      - name: Lint (eslint)
+        working-directory: apps/web
+        run: npm run lint
+
       - name: Run Vitest
         working-directory: apps/web
         run: npx vitest run --reporter=verbose
+
+      - name: Production build
+        working-directory: apps/web
+        run: npm run build
 
   # ---------------------------------------------------------------------------
   # 5. Backend unit tests (no database required)

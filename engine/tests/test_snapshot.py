@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import pytest
-
 from thermal_core.heat_source import HeatSourceMap
 from thermal_core.snapshot import (
     BoundaryConditions,
@@ -15,7 +14,6 @@ from thermal_core.snapshot import (
     SurfaceOrientation,
     SurfaceSnapshot,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixture builders

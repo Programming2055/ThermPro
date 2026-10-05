@@ -16,10 +16,8 @@ Rules enforced:
 """
 from __future__ import annotations
 
-import math
 import uuid
 import warnings
-from typing import Optional
 
 from thermal_core.geometry import Point3D
 from thermal_core.heat_source import (
@@ -84,8 +82,8 @@ def device_heat_source(
     entity_id: str,
     location: Point3D,
     operating_current_a: float,
-    volume_m3: Optional[float] = None,
-    surface_area_m2: Optional[float] = None,
+    volume_m3: float | None = None,
+    surface_area_m2: float | None = None,
 ) -> HeatSource:
     """
     Compute a HeatSource for a placed protective device.
@@ -144,8 +142,8 @@ def busbar_heat_source(
     operating_current_a: float,
     k_ac: float = 1.0,
     k_ac_source: str = "NOT_APPLIED",
-    volume_m3: Optional[float] = None,
-    surface_area_m2: Optional[float] = None,
+    volume_m3: float | None = None,
+    surface_area_m2: float | None = None,
 ) -> HeatSource:
     """
     Compute a HeatSource for a placed busbar segment using I²R_DC × K_AC.
@@ -209,8 +207,8 @@ def busbar_heat_source_resolved(
     operating_current_a: float,
     k_ac: float = 1.0,
     k_ac_source: str = "NOT_APPLIED",
-    volume_m3: Optional[float] = None,
-    surface_area_m2: Optional[float] = None,
+    volume_m3: float | None = None,
+    surface_area_m2: float | None = None,
 ) -> HeatSource:
     """
     Compute busbar HeatSource with caller-supplied material resistivity.
@@ -334,8 +332,8 @@ def cable_heat_source(
     location: Point3D,
     length_m: float,
     operating_current_a: float,
-    volume_m3: Optional[float] = None,
-    surface_area_m2: Optional[float] = None,
+    volume_m3: float | None = None,
+    surface_area_m2: float | None = None,
 ) -> HeatSource:
     """
     Compute a HeatSource for a cable run at reference temperature (20 °C).

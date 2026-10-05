@@ -17,5 +17,4 @@ markers = [
     "units: unit conversion tests (UT-UNITS-001 through UT-UNITS-010)",
 ]
 
-[tool.mypy]
-strict = true
+# mypy configuration lives in the repository-root mypy.ini (see that file).

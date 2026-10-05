@@ -20,7 +20,6 @@ Equation reference: THERM-EQN-001 §7 (Validation Benchmarks)
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from thermal_core.radiation.gray_body import STEFAN_BOLTZMANN
 

@@ -15,10 +15,9 @@ status=FAILED in the ResultSnapshot.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from thermal_core.snapshot import CalculationMode, InputSnapshot
-
 
 # ---------------------------------------------------------------------------
 # Validation result types

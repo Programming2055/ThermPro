@@ -118,8 +118,8 @@ export interface Project {
 
 export interface CreateProjectRequest {
   name: string;
-  description?: string;
-  standard_profile?: StandardProfile;
+  description?: string | undefined;
+  standard_profile?: StandardProfile | undefined;
 }
 
 // ─── Library releases ────────────────────────────────────────────────────────

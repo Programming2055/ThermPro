@@ -7,13 +7,12 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from thermpro_schemas import SchemaValidationError, validate_input_snapshot
-
 from thermpro_api.models.calculation_run import CalculationRun
 from thermpro_api.models.library_release import LibraryRelease
 from thermpro_api.services.audit import AuditService
 from thermpro_api.services.auth import UserContext
 from thermpro_api.services.hashing import sha256_hex
+from thermpro_schemas import SchemaValidationError, validate_input_snapshot
 
 
 class CalculationSubmissionError(ValueError):

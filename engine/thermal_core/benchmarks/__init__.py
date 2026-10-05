@@ -11,15 +11,15 @@ Per CLAUDE.md CR-TECH-003 and M0-05:
   - The benchmarks here are EVERY-PUSH gates (BM-001 through BM-006).
 """
 from thermal_core.benchmarks.analytical import (
+    BenchmarkResult,
     conduction_through_plate,
     convection_cooling,
     radiation_exchange,
-    BenchmarkResult,
 )
 
 __all__ = [
+    "BenchmarkResult",
     "conduction_through_plate",
     "convection_cooling",
     "radiation_exchange",
-    "BenchmarkResult",
 ]

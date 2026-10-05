@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
-
 
 # ---------------------------------------------------------------------------
 # Confidence and source enumerations
@@ -171,8 +169,8 @@ class FanCurvePoint:
 
     flow_m3_per_s: float             # m³/s, SI
     static_pressure_pa: float        # Pa, SI
-    power_w: Optional[float]         # watts, SI (may be None)
-    efficiency: Optional[float]      # 0–1, dimensionless (may be None)
+    power_w: float | None         # watts, SI (may be None)
+    efficiency: float | None      # 0–1, dimensionless (may be None)
 
 
 # ---------------------------------------------------------------------------
@@ -196,12 +194,12 @@ class MaterialLibraryEntry:
     thermal_conductivity_w_per_m_k: float      # W/(m·K), SI
     density_kg_per_m3: float                   # kg/m³, SI
     specific_heat_j_per_kg_k: float            # J/(kg·K), SI
-    electrical_resistivity_ohm_m: Optional[float]  # Ω·m, SI; None for non-conductors
-    temp_coeff_resistance_per_k: Optional[float]   # 1/K; None for non-conductors
-    emissivity: Optional[float]                    # 0–1; None if not applicable
-    max_operating_temp_k: Optional[float]          # K (CR-ENG-003)
+    electrical_resistivity_ohm_m: float | None  # Ω·m, SI; None for non-conductors
+    temp_coeff_resistance_per_k: float | None   # 1/K; None for non-conductors
+    emissivity: float | None                    # 0–1; None if not applicable
+    max_operating_temp_k: float | None          # K (CR-ENG-003)
     references: tuple[str, ...] = field(default_factory=tuple)
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -221,10 +219,10 @@ class SurfaceLibraryEntry:
     library_version: str
     name: str                      # "RAL 7035 Powder Coat", "Bare Aluminium", …
     emissivity: float              # 0–1 (hemispherical total)
-    absorptivity: Optional[float]  # 0–1; if None, assume = emissivity (grey body)
-    roughness_um: Optional[float]  # surface roughness in micrometres
-    coating: Optional[str]         # descriptive, e.g. "Polyester powder coat"
-    material_ref: Optional[str]    # UUID of base material in MaterialLibraryEntry
+    absorptivity: float | None  # 0–1; if None, assume = emissivity (grey body)
+    roughness_um: float | None  # surface roughness in micrometres
+    coating: str | None         # descriptive, e.g. "Polyester powder coat"
+    material_ref: str | None    # UUID of base material in MaterialLibraryEntry
     references: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -251,9 +249,10 @@ class BusbarProfileLibraryEntry:
     coating: BusbarCoating
     thickness_m: float                     # metres, SI
     width_m: float                         # metres, SI
-    cross_section_area_m2: float           # metres², SI (may differ from width×thickness for non-flat)
-    max_continuous_current_a: Optional[float]  # amperes, SI
-    emissivity_override: Optional[float]   # overrides material emissivity if coated
+    # metres², SI (may differ from width × thickness for non-flat profiles)
+    cross_section_area_m2: float
+    max_continuous_current_a: float | None  # amperes, SI
+    emissivity_override: float | None   # overrides material emissivity if coated
     references: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -291,9 +290,9 @@ class DeviceLibraryEntry:
     power_loss_curve: tuple[LossCurvePoint, ...]
     loss_confidence: LossConfidence
     references: tuple[str, ...] = field(default_factory=tuple)
-    notes: Optional[str] = None
+    notes: str | None = None
 
-    def power_loss_at_rated_w(self) -> Optional[float]:
+    def power_loss_at_rated_w(self) -> float | None:
         """Return loss at fraction=1.0 if the curve contains that point."""
         for pt in self.power_loss_curve:
             if abs(pt.current_fraction - 1.0) < 1e-6:
@@ -327,8 +326,8 @@ class FanLibraryEntry:
     rated_flow_m3_per_s: float     # m³/s at rated duty, SI
     rated_pressure_pa: float       # Pa static at rated duty, SI
     rated_power_w: float           # shaft power at rated duty, SI
-    voltage_v: Optional[float]     # volts, SI
-    frequency_hz: Optional[float]  # Hz, SI
+    voltage_v: float | None     # volts, SI
+    frequency_hz: float | None  # Hz, SI
     fan_curve: tuple[FanCurvePoint, ...]
     references: tuple[str, ...] = field(default_factory=tuple)
 
@@ -354,12 +353,12 @@ class FilterLibraryEntry:
     library_version: str
     manufacturer: str
     model: str
-    dust_class: Optional[str]          # ISO 16890 / EN 779 class, e.g. "ePM10 50%"
+    dust_class: str | None          # ISO 16890 / EN 779 class, e.g. "ePM10 50%"
     rated_flow_m3_per_s: float         # m³/s, SI
     pressure_drop_pa: float            # Pa at rated flow, clean (SI)
     loss_coefficient: float            # dimensionless
-    porosity: Optional[float]          # 0–1 open area fraction
-    initial_efficiency: Optional[float]  # 0–1
+    porosity: float | None          # 0–1 open area fraction
+    initial_efficiency: float | None  # 0–1
     references: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -388,7 +387,7 @@ class VentilationOpeningLibraryEntry:
     gross_height_m: float              # metres, SI
     open_area_fraction: float          # 0–1, dimensionless
     discharge_coefficient: float       # 0–1, dimensionless (typical 0.5–0.65)
-    filter_ref: Optional[str]          # UUID → FilterLibraryEntry if integrated
+    filter_ref: str | None          # UUID → FilterLibraryEntry if integrated
     references: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -409,7 +408,7 @@ class CableLibraryEntry:
 
     entry_id: str
     library_version: str
-    manufacturer: Optional[str]
+    manufacturer: str | None
     designation: str               # e.g. "YJY 3×185 mm² CU XLPE"
     conductor: CableConductor
     insulation: CableInsulation
@@ -444,12 +443,12 @@ class ConnectionLibraryEntry:
     library_version: str
     name: str                          # e.g. "M10 silver-plated bolted Cu-Cu"
     contact_quality: ContactQuality
-    plating: Optional[str]             # "silver", "tin", "nickel", None = bare
-    bolt_size_m: Optional[float]       # bolt diameter, metres, SI
-    bolt_torque_n_m: Optional[float]   # N·m, SI
-    contact_pressure_pa: Optional[float]  # Pa, SI
+    plating: str | None             # "silver", "tin", "nickel", None = bare
+    bolt_size_m: float | None       # bolt diameter, metres, SI
+    bolt_torque_n_m: float | None   # N·m, SI
+    contact_pressure_pa: float | None  # Pa, SI
     joint_resistance_ohm: float        # Ω, SI
     resistance_source: str             # ContactResistanceSource value
     age_factor: float = 1.0            # dimensionless multiplier for aged joints
     references: tuple[str, ...] = field(default_factory=tuple)
-    notes: Optional[str] = None
+    notes: str | None = None
