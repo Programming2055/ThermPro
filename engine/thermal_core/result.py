@@ -165,8 +165,9 @@ class ResultSnapshot:
     total_heat_dissipation_w: float  # total heat leaving via all surfaces + openings
     energy_balance_error_percent: float  # |gen - diss| / gen × 100
 
-    # Elapsed wall-clock time
-    elapsed_seconds: float
+    # Elapsed wall-clock time. Diagnostic only: excluded from equality so that
+    # identical inputs yield equal results (M4 rule 6, deterministic).
+    elapsed_seconds: float = field(compare=False)
 
     # Structured warnings (ordered by severity)
     warnings: tuple[SolverWarning, ...]

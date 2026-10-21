@@ -41,7 +41,8 @@ export function CreateProjectPage() {
   const onSubmit = async (data: FormValues) => {
     setSubmitError(null);
     try {
-      await projectsApi.create(data);
+      const { description, ...rest } = data;
+      await projectsApi.create(description ? { ...rest, description } : rest);
       navigate("/projects");
     } catch (e: unknown) {
       setSubmitError(e instanceof Error ? e.message : "Failed to create project");

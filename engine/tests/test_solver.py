@@ -316,3 +316,10 @@ class TestSolverDeterminism:
         t1 = result1.max_air_temperature_k()
         t2 = result2.max_air_temperature_k()
         assert t1 == t2
+
+
+class TestResultEquality:
+    def test_identical_inputs_give_equal_results(self) -> None:
+        """M4 rule 6: whole-result equality must not depend on wall-clock time."""
+        snap = _make_enclosure_snapshot(q_heat_source_w=1000.0)
+        assert solve(snap) == solve(snap)
