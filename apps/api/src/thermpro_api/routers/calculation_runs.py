@@ -39,6 +39,8 @@ class CalculationRunResponse(BaseModel):
     status: str
     input_checksum_sha256: str
     rejection_reason: str | None
+    engine_version: str | None = None
+    result_snapshot: dict[str, Any] | None = None
     submitted_at: str | None
     completed_at: str | None
 
@@ -55,8 +57,9 @@ async def submit_calculation(
     Submit a calculation run.
 
     The input_snapshot is validated against M0-03 JSON Schema and the
-    library manifest is verified. The run is stored immutably with status
-    ENGINE_NOT_IMPLEMENTED (M1).
+    library manifest is verified. The run is stored immutably and, for MODE_2,
+    the M4 solver is run synchronously (COMPLETED | NON_CONVERGED | FAILED);
+    other modes stay ENGINE_NOT_IMPLEMENTED.
     """
     svc = CalculationService(db)
     try:

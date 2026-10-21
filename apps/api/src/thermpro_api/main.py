@@ -59,6 +59,15 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     async def on_startup() -> None:
+        if settings.dev_auth_enabled:
+            from thermpro_api.database import get_session_factory
+            from thermpro_api.services.auth import ensure_dev_user
+
+            try:
+                async with get_session_factory()() as session:
+                    await ensure_dev_user(session)
+            except Exception as exc:  # DB may not be migrated yet
+                logger.warning("thermpro_api.dev_user_seed_failed", error=str(exc))
         logger.info(
             "thermpro_api.startup",
             version=settings.app_version,

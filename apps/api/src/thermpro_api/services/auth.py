@@ -53,6 +53,22 @@ class DevAuthProvider(AuthProvider):
         return self._DEV_USER
 
 
+async def ensure_dev_user(db) -> None:  # type: ignore[no-untyped-def]
+    """Idempotently insert the development user so FK constraints are satisfiable."""
+    from sqlalchemy.dialects.postgresql import insert
+
+    from thermpro_api.models.user import User
+
+    u = DevAuthProvider._DEV_USER
+    await db.execute(
+        insert(User)
+        .values(id=u.user_id, email=u.email, display_name=u.display_name, role=u.role,
+                is_active=True)
+        .on_conflict_do_nothing(index_elements=["id"])
+    )
+    await db.commit()
+
+
 # Module-level singleton (replaced in tests)
 _auth_provider: AuthProvider = DevAuthProvider()
 

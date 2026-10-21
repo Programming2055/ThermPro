@@ -5,6 +5,8 @@ Audit events are recorded on every write.
 """
 from __future__ import annotations
 
+from datetime import datetime
+
 import uuid
 from typing import Annotated, Any
 
@@ -48,7 +50,7 @@ class AssemblyResponse(BaseModel):
     description: str | None
     coordinate_system_version: str
     revision: int
-    created_at: str | None = None
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -96,7 +98,7 @@ class EnclosureResponse(BaseModel):
     ip_rating: str | None
     coordinate_system_version: str
     revision: int
-    created_at: str | None = None
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

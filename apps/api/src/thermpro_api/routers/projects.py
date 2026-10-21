@@ -1,6 +1,8 @@
 """Project CRUD endpoints."""
 from __future__ import annotations
 
+from datetime import datetime
+
 import uuid
 from typing import Annotated, Generic, TypeVar
 
@@ -36,7 +38,7 @@ class ProjectResponse(BaseModel):
     description: str | None
     owner_id: uuid.UUID
     is_archived: bool
-    created_at: str | None = None
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
