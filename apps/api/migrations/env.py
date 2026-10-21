@@ -7,11 +7,10 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from thermpro_api.database import Base
-from thermpro_api.settings import get_settings
-
 # Import all models so Alembic detects them via Base.metadata
 import thermpro_api.models  # noqa: F401
+from thermpro_api.database import Base
+from thermpro_api.settings import get_settings
 
 config = context.config
 

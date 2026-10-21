@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 
 from thermpro_api.settings import get_settings
 
@@ -19,6 +20,15 @@ class Base(DeclarativeBase):
 
 def _make_engine():
     settings = get_settings()
+    if settings.serverless:
+        # Transaction-pooled endpoints (pgbouncer/Supavisor) reject prepared statements,
+        # and short-lived functions should not hold a pool.
+        return create_async_engine(
+            str(settings.database_url),
+            echo=settings.debug,
+            poolclass=NullPool,
+            connect_args={"prepare_threshold": None},
+        )
     return create_async_engine(
         str(settings.database_url),
         echo=settings.debug,

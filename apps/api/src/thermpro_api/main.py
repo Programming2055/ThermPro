@@ -59,6 +59,12 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     async def on_startup() -> None:
+        if settings.auto_create_tables:
+            from thermpro_api import models  # noqa: F401  (registers tables)
+            from thermpro_api.database import Base, get_engine
+
+            async with get_engine().begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
         if settings.dev_auth_enabled:
             from thermpro_api.database import get_session_factory
             from thermpro_api.services.auth import ensure_dev_user
