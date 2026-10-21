@@ -11,11 +11,12 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.9.0",
     "pydantic-settings>=2.5.0",
-    "sqlalchemy>=2.0.36",
+    "sqlalchemy[asyncio]>=2.0.36",
     "alembic>=1.13.0",
     "psycopg[binary]>=3.2.0",
     "jsonschema>=4.23.0",
     "boto3>=1.35.0",
+    "python-multipart>=0.0.9",
     "structlog>=24.4.0",
     "thermpro-units",
     "thermpro-schemas",
@@ -43,6 +44,8 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM"]
+# FastAPI idiom: Depends()/Query() in argument defaults.
+ignore = ["B008"]
 
 [tool.mypy]
 strict = true

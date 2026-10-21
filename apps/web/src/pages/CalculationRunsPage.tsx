@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { calculationRunsApi } from "@/api/client";
 import type { CalculationRun } from "@/types/api";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Link } from "react-router-dom";
 import styles from "./ListPage.module.css";
 
 export function CalculationRunsPage() {
@@ -26,10 +27,11 @@ export function CalculationRunsPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.heading}>Calculation Runs</h1>
+        <Link to="/calculations/new" className={styles.primaryBtn}>New calculation</Link>
       </div>
       <p className={styles.sub}>
-        Immutable calculation snapshots. M1 submissions return{" "}
-        <code className={styles.code}>ENGINE_NOT_IMPLEMENTED</code> — no thermal solver has run.
+        Immutable calculation snapshots. MODE 2 runs are solved on submission; other modes are
+        stored as <code className={styles.code}>ENGINE_NOT_IMPLEMENTED</code>.
       </p>
 
       {loading && <p className={styles.message}>Loading…</p>}
@@ -53,9 +55,9 @@ export function CalculationRunsPage() {
             {runs.map((run) => (
               <tr key={run.id}>
                 <td>
-                  <code className={styles.hash} title={run.id}>
-                    {run.id.slice(0, 8)}…
-                  </code>
+                  <Link to={`/calculation-runs/${run.id}`} title={run.id}>
+                    <code className={styles.hash}>{run.id.slice(0, 8)}…</code>
+                  </Link>
                 </td>
                 <td>
                   <StatusBadge status={run.status} />
@@ -71,7 +73,7 @@ export function CalculationRunsPage() {
                   </code>
                 </td>
                 <td className={styles.dateCell}>
-                  {new Date(run.submitted_at).toLocaleString()}
+                  {run.submitted_at ? new Date(run.submitted_at).toLocaleString() : "—"}
                 </td>
               </tr>
             ))}

@@ -18,6 +18,15 @@ class Settings(BaseSettings):
         description="PostgreSQL connection string (psycopg3 dialect).",
     )
 
+    serverless: bool = Field(
+        default=False,
+        description="Serverless/pooler-safe DB connections (no pool, no prepared statements).",
+    )
+    auto_create_tables: bool = Field(
+        default=False,
+        description="Create missing tables on startup (idempotent). Prefer Alembic where possible.",
+    )
+
     # Object storage
     s3_endpoint_url: str = Field(
         default="http://localhost:9000",
@@ -45,6 +54,16 @@ class Settings(BaseSettings):
     jwt_secret: str = Field(default="dev-secret-change-in-production")
     jwt_algorithm: str = Field(default="HS256")
     jwt_expire_minutes: int = Field(default=60)
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalise_database_url(cls, v: object) -> object:
+        """Accept provider-style URLs (postgres://, postgresql://) and use the psycopg3 dialect."""
+        if isinstance(v, str):
+            for prefix in ("postgres://", "postgresql://"):
+                if v.startswith(prefix):
+                    return "postgresql+psycopg://" + v[len(prefix):]
+        return v
 
     @field_validator("log_level")
     @classmethod

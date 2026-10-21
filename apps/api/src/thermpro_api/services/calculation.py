@@ -7,6 +7,9 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from thermal_core import __version__ as engine_version
+from thermal_core import solve as run_solver
+from thermal_core.serialization import result_to_dict
 from thermpro_schemas import SchemaValidationError, validate_input_snapshot
 
 from thermpro_api.models.calculation_run import CalculationRun
@@ -14,6 +17,13 @@ from thermpro_api.models.library_release import LibraryRelease
 from thermpro_api.services.audit import AuditService
 from thermpro_api.services.auth import UserContext
 from thermpro_api.services.hashing import sha256_hex
+from thermpro_api.services.solver_adapter import AdaptationError, build_solver_input
+
+_STATUS_BY_SOLVER = {
+    "CONVERGED": "COMPLETED",
+    "NON_CONVERGED": "NON_CONVERGED",  # CR-ENG-005: never presented as a valid result
+    "FAILED": "FAILED",
+}
 
 
 class CalculationSubmissionError(ValueError):
@@ -46,7 +56,8 @@ class CalculationService:
            with matching content hashes.
         4. Compute canonical input checksum (SHA-256 of canonical JSON).
         5. Persist immutable CalculationRun.
-        6. Return with status ENGINE_NOT_IMPLEMENTED (M1: solver not yet built).
+        6. MODE_2 runs the M4 zonal solver synchronously (COMPLETED | NON_CONVERGED |
+           FAILED); other modes stay ENGINE_NOT_IMPLEMENTED.
 
         The input_snapshot is NEVER modified after submission.
 
@@ -83,9 +94,20 @@ class CalculationService:
         # Step 4: canonical checksum
         checksum = sha256_hex(input_snapshot)
 
+        # Step 4b: only MODE_2 is executable today; build the solver input up front
+        # so an unsolvable snapshot is rejected before anything is stored.
+        adaptation = None
+        run_id = uuid.uuid4()
+        if input_snapshot["mode"] == "MODE_2":
+            try:
+                adaptation = build_solver_input(input_snapshot, str(run_id))
+            except (AdaptationError, ValueError) as exc:
+                raise CalculationSubmissionError(str(exc), details=[str(exc)]) from exc
+
         # Step 5: persist immutable run
         now_iso = datetime.now(UTC).isoformat()
         run = CalculationRun(
+            id=run_id,
             project_id=project_id,
             submitted_by_id=actor.user_id,
             input_snapshot=input_snapshot,
@@ -95,6 +117,23 @@ class CalculationService:
             status="ENGINE_NOT_IMPLEMENTED",
             submitted_at=now_iso,
         )
+        if adaptation is not None:
+            run.started_at = datetime.now(UTC).isoformat()
+            result = run_solver(adaptation.solver_input)
+            payload = result_to_dict(result)
+            payload["assumptions"] = list(adaptation.assumptions)
+            payload["warnings"] = payload["warnings"] + list(adaptation.warnings)
+            run.result_snapshot = payload
+            run.result_checksum_sha256 = sha256_hex(payload)
+            run.engine_version = engine_version
+            run.status = _STATUS_BY_SOLVER[result.status.value]
+            run.completed_at = datetime.now(UTC).isoformat()
+            if result.status.value != "CONVERGED":
+                run.rejection_reason = (
+                    "Solver did not converge: result is INVALID."
+                    if result.status.value == "NON_CONVERGED"
+                    else "; ".join(w.message for w in result.warnings)
+                )
         self._db.add(run)
         await self._db.flush()
 

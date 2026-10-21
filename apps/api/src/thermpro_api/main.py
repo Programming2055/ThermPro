@@ -11,6 +11,7 @@ from thermpro_api.routers import (
     dataset_manifests,
     geometry,
     health,
+    library_entries,
     library_releases,
     projects,
 )
@@ -54,9 +55,25 @@ def create_app() -> FastAPI:
     app.include_router(calculation_runs.router, prefix=api_v1_prefix)
     app.include_router(artifacts.router, prefix=api_v1_prefix)
     app.include_router(geometry.router, prefix=api_v1_prefix)
+    app.include_router(library_entries.router, prefix=api_v1_prefix)
 
     @app.on_event("startup")
     async def on_startup() -> None:
+        if settings.auto_create_tables:
+            from thermpro_api import models  # noqa: F401  (registers tables)
+            from thermpro_api.database import Base, get_engine
+
+            async with get_engine().begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+        if settings.dev_auth_enabled:
+            from thermpro_api.database import get_session_factory
+            from thermpro_api.services.auth import ensure_dev_user
+
+            try:
+                async with get_session_factory()() as session:
+                    await ensure_dev_user(session)
+            except Exception as exc:  # DB may not be migrated yet
+                logger.warning("thermpro_api.dev_user_seed_failed", error=str(exc))
         logger.info(
             "thermpro_api.startup",
             version=settings.app_version,

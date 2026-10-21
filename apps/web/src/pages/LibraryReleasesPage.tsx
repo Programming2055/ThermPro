@@ -65,7 +65,7 @@ export function LibraryReleasesPage() {
                   </code>
                 </td>
                 <td className={styles.dateCell}>
-                  {new Date(r.created_at).toLocaleDateString()}
+                  {r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}
                 </td>
               </tr>
             ))}

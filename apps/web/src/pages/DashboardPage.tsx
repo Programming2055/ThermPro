@@ -92,7 +92,7 @@ interface CardProps {
   title: string;
   description: string;
   href?: string;
-  footer?: string;
+  footer?: string | undefined;
   accent: "success" | "error" | "neutral";
 }
 

@@ -65,6 +65,7 @@ export type CalculationRunStatus =
   | "COMPLETED"
   | "FAILED"
   | "CANCELLED"
+  | "NON_CONVERGED"
   | "ENGINE_NOT_IMPLEMENTED";
 
 // ─── Library manifest ────────────────────────────────────────────────────────
@@ -159,8 +160,58 @@ export interface CalculationRun {
   schema_version: string;
   input_checksum_sha256: string;
   rejection_reason: string | null;
-  submitted_at: string;
+  submitted_at: string | null;
   completed_at: string | null;
+  engine_version?: string | null;
+  result_snapshot?: ResultSnapshot | null;
+}
+
+// ─── Solver result (M4 ResultSnapshot, temperatures in kelvin — CR-ENG-003) ──
+
+export interface SolverWarning {
+  code: string;
+  message: string;
+  entity_id?: string | null;
+}
+
+export interface CompartmentResult {
+  compartment_id: string;
+  mean_air_temperature_k: number;
+  max_device_temperature_k: number | null;
+  max_surface_temperature_k: number | null;
+  total_heat_generation_w: number;
+  heat_to_ambient_w: number;
+}
+
+export interface NodeTemperature {
+  node_id: string;
+  node_type: string;
+  temperature_k: number;
+  heat_generation_w: number;
+}
+
+export interface ConvergenceTrace {
+  iteration: number;
+  max_delta_k: number;
+  rms_delta_k: number;
+  energy_balance_error_w: number;
+  ua_total_w_per_k: number | null;
+}
+
+export interface ResultSnapshot {
+  schema_version: string;
+  calculation_id: string;
+  status: "CONVERGED" | "NON_CONVERGED" | "FAILED";
+  is_valid: boolean;
+  node_temperatures: NodeTemperature[];
+  compartment_results: CompartmentResult[];
+  convergence_trace: ConvergenceTrace[];
+  total_heat_generation_w: number;
+  total_heat_dissipation_w: number;
+  energy_balance_error_percent: number;
+  elapsed_seconds: number;
+  warnings: SolverWarning[];
+  assumptions?: string[];
 }
 
 // ─── Artifacts ───────────────────────────────────────────────────────────────

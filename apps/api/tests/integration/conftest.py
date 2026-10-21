@@ -30,6 +30,12 @@ async def test_engine():
     engine = create_async_engine(TEST_DB_URL, echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from thermpro_api.services.auth import ensure_dev_user
+
+    async with AsyncSession(engine) as session:
+        await ensure_dev_user(session)
     yield engine
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

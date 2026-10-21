@@ -29,6 +29,8 @@ export function HealthPage() {
       });
   };
 
+  // Run once on mount; refresh only calls stable store setters.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(refresh, []);
 
   return (

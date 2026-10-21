@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Annotated, Generic, TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -36,7 +37,7 @@ class ProjectResponse(BaseModel):
     description: str | None
     owner_id: uuid.UUID
     is_archived: bool
-    created_at: str | None = None
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

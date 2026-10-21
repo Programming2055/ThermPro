@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Annotated, Any, Generic, TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -40,7 +41,7 @@ class LibraryReleaseResponse(BaseModel):
     status: str
     content_hash_sha256: str
     description: str | None
-    created_at: str | None = None
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
