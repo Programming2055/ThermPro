@@ -8,7 +8,6 @@ Create Date: 2026-07-19 00:00:00.000000
 from __future__ import annotations
 
 import uuid
-
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
