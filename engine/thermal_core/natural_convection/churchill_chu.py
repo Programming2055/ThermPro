@@ -16,8 +16,6 @@ Equation reference: THERM-EQN-001 §6.4 (Natural Convection)
 """
 from __future__ import annotations
 
-import math
-from typing import Optional
 
 from thermal_core.materials.air_properties import AirProperties, air_at, film_temperature_k
 from thermal_core.snapshot import SurfaceOrientation
@@ -93,7 +91,7 @@ def nusselt_vertical_plate(ra: float, pr: float) -> float:
     psi = (0.492 / pr) ** (9.0 / 16.0)
     bracket = (1.0 + psi) ** (8.0 / 27.0)
     nu = (0.825 + 0.387 * ra ** (1.0 / 6.0) / bracket) ** 2
-    return max(nu, 1.0)
+    return float(max(nu, 1.0))
 
 
 def nusselt_horizontal_plate_up(ra: float) -> float:
@@ -111,8 +109,8 @@ def nusselt_horizontal_plate_up(ra: float) -> float:
     if ra < 1e4:
         return 1.0
     if ra < 1e7:
-        return 0.54 * ra ** 0.25
-    return 0.15 * ra ** (1.0 / 3.0)
+        return float(0.54 * ra ** 0.25)
+    return float(0.15 * ra ** (1.0 / 3.0))
 
 
 def nusselt_horizontal_plate_down(ra: float) -> float:
@@ -128,7 +126,7 @@ def nusselt_horizontal_plate_down(ra: float) -> float:
         return 1.0
     if ra < 1e5:
         return 1.0
-    return 0.27 * ra ** 0.25
+    return float(0.27 * ra ** 0.25)
 
 
 # ---------------------------------------------------------------------------

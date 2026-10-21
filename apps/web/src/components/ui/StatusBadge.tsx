@@ -15,6 +15,7 @@ const STATUS_STYLES: Record<string, string> = {
   ENGINE_NOT_IMPLEMENTED: "badge-warning",
   DRAFT: "badge-neutral",
   FAILED: "badge-error",
+  NON_CONVERGED: "badge-error",
   REJECTED: "badge-error",
   CANCELLED: "badge-neutral",
   SUPERSEDED: "badge-neutral",

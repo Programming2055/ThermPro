@@ -112,6 +112,8 @@ All unit tests reside in `engine/tests/`. They are Python pytest tests run with
 | UT-VAL-006 | MODE_1 + forced → error VAL-006 (CR-ENG-006) | ValidationError code = VAL-006 |
 | UT-VAL-007 | Compartment references non-existent surface → error VAL-007 | ValidationError code = VAL-007 |
 | UT-VAL-008 | Compartment references non-existent heat source → error VAL-008 | ValidationError code = VAL-008 |
+| UT-VAL-010 | Heated compartment with no external surface → error VAL-011 | ValidationError code = VAL-011 |
+| UT-SOL-011 | Insulating a face raises air temperature; adiabatic face = surface omitted | T(adiabatic) > T(open) |
 | UT-VAL-009 | max_iterations < 1 → error VAL-010 | ValidationError code = VAL-010 |
 
 ---

@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
-from thermal_core.heat_source import HeatSource, HeatSourceMap
+from thermal_core.heat_source import HeatSourceMap
 
 
 # ---------------------------------------------------------------------------

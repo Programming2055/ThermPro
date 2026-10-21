@@ -203,7 +203,7 @@ def build_solver_input(snapshot: dict[str, Any], calculation_id: str) -> Adaptat
         solver_settings=settings,
     )
     assumptions = (
-        "Single well-mixed air zone for the whole enclosure (zonal model, one mean air temperature).",
+        "Single well-mixed air zone for the whole enclosure (zonal model, one mean air temp.).",
         "Ambient is the maximum service ambient temperature (worst case), not the 24 h average.",
         "Internal volume is taken equal to the external envelope volume.",
         "Ambient pressure is 101325 Pa; altitude is not applied.",

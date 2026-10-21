@@ -15,8 +15,9 @@ status=FAILED in the ResultSnapshot.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
+from thermal_core.heat_generation.generation import compartment_heat_generation_w
 from thermal_core.snapshot import CalculationMode, InputSnapshot
 
 
@@ -66,6 +67,7 @@ def validate_input_snapshot(snapshot: InputSnapshot) -> ValidationResult:
       VAL-008: all compartment heat_source_ids reference existing heat sources
       VAL-009: total heat generation >= 0 W
       VAL-010: max_iterations >= 1 and convergence_tolerance_k > 0
+      VAL-011: every heated compartment has a heat path to ambient (an external surface)
     """
     errors: list[ValidationError] = []
 
@@ -75,6 +77,7 @@ def validate_input_snapshot(snapshot: InputSnapshot) -> ValidationResult:
     _check_mode_6(snapshot, errors)
     _check_heat_sources(snapshot, errors)
     _check_solver_settings(snapshot, errors)
+    _check_heat_path(snapshot, errors)
 
     return ValidationResult(errors=tuple(errors))
 
@@ -192,3 +195,25 @@ def _check_solver_settings(snap: InputSnapshot, errors: list[ValidationError]) -
                 f"got {ss.convergence_tolerance_k}"
             ),
         ))
+
+
+def _check_heat_path(snap: InputSnapshot, errors: list[ValidationError]) -> None:
+    """VAL-011: a compartment that generates heat needs an external surface to reject it."""
+    surf_by_id = {s.surface_id: s for s in snap.geometry.surfaces}
+    for comp in snap.geometry.compartments:
+        if compartment_heat_generation_w(snap.heat_source_map, comp) <= 0:
+            continue
+        has_path = any(
+            surf_by_id[sid].is_external and surf_by_id[sid].area_m2 > 0
+            for sid in comp.surface_ids
+            if sid in surf_by_id
+        )
+        if not has_path:
+            errors.append(ValidationError(
+                code="VAL-011",
+                message=(
+                    f"Compartment '{comp.compartment_id}' generates heat but has no external "
+                    "surface; there is no heat path to ambient and no temperature can be computed."
+                ),
+                entity_id=comp.compartment_id,
+            ))

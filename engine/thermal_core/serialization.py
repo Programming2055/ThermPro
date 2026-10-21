@@ -27,6 +27,6 @@ def _plain(value: Any) -> Any:
 
 def result_to_dict(result: ResultSnapshot) -> dict[str, Any]:
     """Convert a ResultSnapshot to plain JSON types, adding the derived ``is_valid`` flag."""
-    out = _plain(result)
+    out: dict[str, Any] = _plain(result)
     out["is_valid"] = result.is_valid
     return out

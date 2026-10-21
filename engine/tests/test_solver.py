@@ -28,7 +28,7 @@ from thermal_core.snapshot import (
     SurfaceOrientation,
     SurfaceSnapshot,
 )
-from thermal_core.solver.iterative import ZonalSolver, solve
+from thermal_core.solver.iterative import solve
 
 
 # ---------------------------------------------------------------------------
@@ -323,3 +323,61 @@ class TestResultEquality:
         """M4 rule 6: whole-result equality must not depend on wall-clock time."""
         snap = _make_enclosure_snapshot(q_heat_source_w=1000.0)
         assert solve(snap) == solve(snap)
+
+
+class TestAdiabaticSurfaces:
+    """Restricted (non-external) faces are adiabatic: they must not cool the air."""
+
+    @staticmethod
+    def _with_external(flags: tuple[bool, ...]) -> InputSnapshot:
+        import dataclasses
+
+        base = _make_enclosure_snapshot(q_heat_source_w=500.0)
+        template = base.geometry.surfaces[0]
+        surfaces = tuple(
+            dataclasses.replace(template, surface_id=f"s{i}", is_external=ext)
+            for i, ext in enumerate(flags)
+        )
+        comp = dataclasses.replace(
+            base.geometry.compartments[0], surface_ids=tuple(s.surface_id for s in surfaces)
+        )
+        geo = dataclasses.replace(base.geometry, surfaces=surfaces, compartments=(comp,))
+        return dataclasses.replace(base, geometry=geo)
+
+    @staticmethod
+    def _air_k(snap: InputSnapshot) -> float:
+        return solve(snap).compartment_results[0].mean_air_temperature_k
+
+    def test_insulating_a_face_raises_air_temperature(self) -> None:
+        all_open = self._air_k(self._with_external((True, True, True)))
+        one_adiabatic = self._air_k(self._with_external((True, True, False)))
+        assert one_adiabatic > all_open
+
+    def test_adiabatic_face_contributes_nothing(self) -> None:
+        """Result equals the model that simply omits the adiabatic surface."""
+        with_dead_face = self._air_k(self._with_external((True, True, False)))
+        without = self._air_k(self._with_external((True, True)))
+        assert with_dead_face == pytest.approx(without)
+
+    def test_heated_compartment_without_heat_path_fails_not_faked(self) -> None:
+        """M4 rule 10: no external surface -> FAILED (VAL-011), never an invented temperature."""
+        result = solve(self._with_external((False, False)))
+        assert result.status is SolverStatus.FAILED
+        assert result.compartment_results == ()
+        assert any("VAL-011" in w.message for w in result.warnings)
+
+    def test_unheated_compartment_without_heat_path_sits_at_ambient(self) -> None:
+        import dataclasses
+
+        snap = self._with_external((False,))
+        empty = dataclasses.replace(
+            snap,
+            heat_source_map=dataclasses.replace(snap.heat_source_map, sources=[]),
+            geometry=dataclasses.replace(
+                snap.geometry,
+                compartments=(dataclasses.replace(snap.geometry.compartments[0], heat_source_ids=()),),
+            ),
+        )
+        result = solve(empty)
+        assert result.status is SolverStatus.CONVERGED
+        assert result.compartment_results[0].mean_air_temperature_k == pytest.approx(303.15, abs=0.01)  # within solver tolerance

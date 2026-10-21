@@ -16,7 +16,6 @@ Rules enforced:
 """
 from __future__ import annotations
 
-import math
 import uuid
 import warnings
 from typing import Optional

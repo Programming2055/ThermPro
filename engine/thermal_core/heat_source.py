@@ -12,9 +12,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from thermal_core.geometry import Point3D
+
+if TYPE_CHECKING:
+    from thermal_core.libraries import LossConfidence
 
 
 # ---------------------------------------------------------------------------

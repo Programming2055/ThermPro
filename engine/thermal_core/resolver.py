@@ -27,15 +27,10 @@ from __future__ import annotations
 from typing import Any, Optional, Protocol, runtime_checkable
 
 from thermal_core.libraries import (
-    BusbarProfileLibraryEntry,
-    CableLibraryEntry,
-    ConnectionLibraryEntry,
     DeviceLibraryEntry,
     FanLibraryEntry,
-    FilterLibraryEntry,
     MaterialLibraryEntry,
     SurfaceLibraryEntry,
-    VentilationOpeningLibraryEntry,
 )
 from thermal_core.materials.thermal_material import ThermalMaterial
 
@@ -82,7 +77,7 @@ class LibraryResolver:
         The ThermalMaterial is what the solver sees — never the raw library entry.
         """
         return ThermalMaterial(
-            material_id=entry.domain_entry_id,
+            material_id=entry.entry_id,
             name=entry.name,
             thermal_conductivity_w_per_m_k=entry.thermal_conductivity_w_per_m_k,
             density_kg_per_m3=entry.density_kg_per_m3,

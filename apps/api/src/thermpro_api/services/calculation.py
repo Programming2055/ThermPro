@@ -7,11 +7,10 @@ from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from thermpro_schemas import SchemaValidationError, validate_input_snapshot
-
-from thermal_core import __version__ as ENGINE_VERSION
+from thermal_core import __version__ as engine_version
 from thermal_core import solve as run_solver
 from thermal_core.serialization import result_to_dict
+from thermpro_schemas import SchemaValidationError, validate_input_snapshot
 
 from thermpro_api.models.calculation_run import CalculationRun
 from thermpro_api.models.library_release import LibraryRelease
@@ -126,7 +125,7 @@ class CalculationService:
             payload["warnings"] = payload["warnings"] + list(adaptation.warnings)
             run.result_snapshot = payload
             run.result_checksum_sha256 = sha256_hex(payload)
-            run.engine_version = ENGINE_VERSION
+            run.engine_version = engine_version
             run.status = _STATUS_BY_SOLVER[result.status.value]
             run.completed_at = datetime.now(UTC).isoformat()
             if result.status.value != "CONVERGED":

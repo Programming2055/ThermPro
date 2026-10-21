@@ -28,7 +28,6 @@ Equation reference: THERM-EQN-001 §8 (IEC TR 60890 Method)
 """
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass
 from typing import Optional
 

@@ -36,17 +36,14 @@ Equation reference: THERM-EQN-001 §6.8 (Zonal Solver)
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 from thermal_core.conduction.fourier import wall_resistance_k_per_w
 from thermal_core.diagnostics.diagnostics import (
     ConvergenceMonitor,
     energy_balance_error_percent,
-    energy_balance_error_w,
 )
 from thermal_core.heat_generation.generation import compartment_heat_generation_w
-from thermal_core.materials.air_properties import air_at, film_temperature_k
 from thermal_core.natural_convection.churchill_chu import convection_coefficient
 from thermal_core.radiation.gray_body import radiation_conductance_w_per_k
 from thermal_core.result import (
@@ -58,15 +55,12 @@ from thermal_core.result import (
 )
 from thermal_core.result import NodeType as ResultNodeType
 from thermal_core.snapshot import (
-    BoundaryConditions,
     CompartmentSnapshot,
-    GeometrySnapshot,
     InputSnapshot,
     SolverSettings,
     SurfaceOrientation,
     SurfaceSnapshot,
 )
-from thermal_core.solver.node import NodeType, ThermalNode
 from thermal_core.validation.pre_solve import validate_input_snapshot
 
 
@@ -160,7 +154,9 @@ class ZonalSolver:
                 if UA_total > 0:
                     T_solved = T_amb + Q_c / UA_total
                 else:
-                    T_solved = T_amb + 50.0  # fallback: no conductance defined
+                    # No heat path: pre-solve VAL-011 guarantees Q_c == 0 here, so the
+                    # air simply sits at ambient. Never invent a temperature (M4 rule 10).
+                    T_solved = T_amb
 
                 # Floor at T_amb (physically, air can't be below ambient in steady state)
                 T_solved = max(T_solved, T_amb)
@@ -268,6 +264,8 @@ def _compute_ua_total(
 
     ua = 0.0
     for surf in surfaces:
+        if not surf.is_external:
+            continue  # adiabatic: carries no heat to ambient
         A = surf.area_m2
         L = comp.height_m  # characteristic length for convection
 
@@ -380,7 +378,6 @@ def _build_results(
         ]
         total_ext_area = sum(s.area_m2 for s in surfaces)
         if total_ext_area > 0 and T_c > T_amb:
-            n_comps = len(snapshot.geometry.compartments)
             q_out_c = Q_c  # in steady state, q_out = q_in per compartment
         else:
             q_out_c = 0.0

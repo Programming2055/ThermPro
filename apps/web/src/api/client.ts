@@ -42,6 +42,23 @@ class ApiClientError extends Error {
   }
 }
 
+/** FastAPI errors arrive as {detail}: a string, {message, errors}, or a validation array. */
+export function detailMessage(detail: unknown): string | undefined {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const msgs = detail
+      .map((d) => (d && typeof d === "object" && "msg" in d ? String((d as { msg: unknown }).msg) : ""))
+      .filter(Boolean);
+    return msgs.length ? msgs.join("; ") : undefined;
+  }
+  if (detail && typeof detail === "object" && "message" in detail) {
+    const { message, errors } = detail as { message: unknown; errors?: unknown };
+    const extra = Array.isArray(errors) && errors.length ? ` (${errors.join("; ")})` : "";
+    return `${String(message)}${extra}`;
+  }
+  return undefined;
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -61,7 +78,10 @@ async function request<T>(
   });
 
   if (!response.ok) {
-    let errorData: { error?: { code?: string; message?: string; details?: Array<{ field: string; issue: string }> } } = {};
+    let errorData: {
+      error?: { code?: string; message?: string; details?: Array<{ field: string; issue: string }> };
+      detail?: unknown;
+    } = {};
     try {
       errorData = await response.json() as typeof errorData;
     } catch {
@@ -70,7 +90,7 @@ async function request<T>(
     throw new ApiClientError(
       response.status,
       errorData.error?.code ?? "UNKNOWN_ERROR",
-      errorData.error?.message ?? `HTTP ${response.status}`,
+      errorData.error?.message ?? detailMessage(errorData.detail) ?? `HTTP ${response.status}`,
       errorData.error?.details
     );
   }
@@ -136,8 +156,11 @@ export const calculationRunsApi = {
 
   get: (id: string) => get<CalculationRun>(`/calculation-runs/${id}`),
 
-  submit: (inputSnapshot: Record<string, unknown>) =>
-    post<CalculationRun>("/calculation-runs", inputSnapshot),
+  submit: (projectId: string, inputSnapshot: Record<string, unknown>) =>
+    post<CalculationRun>("/calculation-runs", {
+      project_id: projectId,
+      input_snapshot: inputSnapshot,
+    }),
 };
 
 // ─── Artifacts ───────────────────────────────────────────────────────────────

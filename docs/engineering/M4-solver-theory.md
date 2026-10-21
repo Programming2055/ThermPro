@@ -58,6 +58,14 @@ over all external surfaces of the compartment:
 UA_total = Σ_surfaces  UA_surface_i
 ```
 
+### 2.2a Adiabatic (restricted) surfaces
+
+A surface with `is_external = False` (a wall-mounted back, a floor on a slab) is
+adiabatic: it contributes **zero** conductance to `UA_total`. A compartment that
+generates heat but has no external surface has no path to ambient, so no steady
+temperature exists; pre-solve check VAL-011 returns `FAILED` rather than inventing
+one (M4 rule 10). An unheated compartment with no heat path sits at ambient.
+
 ### 2.3 Solving for T_air
 
 Re-arranging the steady-state balance:
